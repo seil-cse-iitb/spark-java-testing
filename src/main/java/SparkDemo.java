@@ -4,6 +4,7 @@ import org.apache.spark.SparkConf;
 import org.apache.spark.SparkContext;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
+import org.apache.spark.api.java.function.VoidFunction;
 import org.apache.spark.api.java.function.VoidFunction2;
 import org.apache.spark.storage.StorageLevel;
 import org.apache.spark.streaming.Duration;
@@ -29,15 +30,21 @@ public class SparkDemo {
         Logger.getLogger("akka").setLevel(Level.OFF);
 
         JavaSparkContext sc = new JavaSparkContext(sparkConf);
-        JavaStreamingContext jssc = new JavaStreamingContext(sc, new Duration(1000));
+        JavaStreamingContext jssc = new JavaStreamingContext(sc, new Duration(3000));
         jssc.checkpoint("checkpoint");
 
         JavaReceiverInputDStream<String> messages = MQTTUtils.createStream(jssc, brokerUrl, topic, StorageLevel.MEMORY_AND_DISK());
 
         messages.foreachRDD(new VoidFunction2<JavaRDD<String>, Time>() {
             public void call(JavaRDD<String> stringJavaRDD, Time time) throws Exception {
-                System.out.println(stringJavaRDD.toDebugString());
                 System.out.println(time.toString());
+                stringJavaRDD.foreach(new VoidFunction<String>() {
+                    public void call(String s) throws Exception {
+                        System.out.println("--------Data-----------");
+                        System.out.println(s);
+                    }
+                });
+                System.out.println("-----------count = "+stringJavaRDD.count()+" ------------");
             }
         });
 
