@@ -64,6 +64,9 @@ public class SparkDemo {
                 });
                 Dataset<Row> rows = sqlContext.applySchema(rowJavaRDD, getDataSchema());
                 rows.show();
+
+                if(rows.count()>0)
+                    System.out.println(rows.first().getFloat(1));
                 HashMap<String,String> aggregationMap = new HashMap<String, String>();
                 aggregationMap.put("W","avg");
                 Dataset<Row> aggRows = rows.agg(aggregationMap);
