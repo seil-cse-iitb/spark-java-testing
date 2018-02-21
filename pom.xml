@@ -11,6 +11,11 @@
 
     <dependencies>
         <dependency>
+            <groupId>mysql</groupId>
+            <artifactId>mysql-connector-java</artifactId>
+            <version>LATEST</version>
+        </dependency>
+        <dependency>
             <groupId>org.apache.bahir</groupId>
             <artifactId>spark-sql-streaming-mqtt_2.11</artifactId>
             <version>LATEST</version>

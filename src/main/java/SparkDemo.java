@@ -30,7 +30,7 @@ import java.util.List;
 public class SparkDemo {
     public static void main(String[] args) {
         String brokerUrl = "tcp://10.129.149.9:1883";
-        String topic = "data/kresit/sch/4";
+        String topic = "data/kresit/sch/3";
         SparkConf sparkConf = new SparkConf().setAppName("SparkDemo")
                 .set("spark.sql.warehouse.dir", "~/Desktop/spark-warehouse")
                 .set("spark.executor.memory", "2g")
@@ -47,21 +47,24 @@ public class SparkDemo {
         jssc.checkpoint("checkpoint");
 
         JavaReceiverInputDStream<String> messages = MQTTUtils.createStream(jssc, brokerUrl, topic, StorageLevel.MEMORY_AND_DISK());
-
+        final Function<String, Row> stringRowFunction = new Function<String, Row>() {
+            public Row call(String s) throws Exception {
+                String[] strList = s.split(",");
+                Float[] floatList = new Float[strList.length];
+                for (int i = 0; i < strList.length; i++) {
+                    floatList[i] = Float.parseFloat(strList[i]);
+                }
+                return RowFactory.create(floatList);
+            }
+        };
         messages.foreachRDD(new VoidFunction2<JavaRDD<String>, Time>() {
+            public void call_(JavaRDD<String> stringJavaRDD, Time time) {
+
+            }
+
             public void call(JavaRDD<String> stringJavaRDD, Time time) throws Exception {
                 System.out.println(time.toString());
-                JavaRDD<Row> rowJavaRDD = stringJavaRDD.map(new Function<String, Row>() {
-                    public Row call(String s) throws Exception {
-
-                        String[] strList = s.split(",");
-                        Float[] floatList = new Float[strList.length];
-                        for (int i = 0; i < strList.length; i++) {
-                            floatList[i]= Float.parseFloat(strList[i]);
-                        }
-                       return RowFactory.create(floatList);
-                    }
-                });
+                JavaRDD<Row> rowJavaRDD = stringJavaRDD.map(stringRowFunction);
                 Dataset<Row> rows = sqlContext.applySchema(rowJavaRDD, getDataSchema());
                 rows.show();
 
