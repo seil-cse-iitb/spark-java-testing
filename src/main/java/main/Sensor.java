@@ -1,11 +1,11 @@
 package main;
 
-import org.apache.kerby.config.Conf;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.HashMap;
 import java.util.Properties;
 
 public class Sensor {
@@ -59,23 +59,44 @@ public class Sensor {
         /*
         This function starts aggregation of archival data after the last aggregated row present corresponding to this sensor
          */
-        fetch1mData();
-        store1mAggregatedData();
+        Dataset<Row> rows = fetchDataForAggregation();
+        rows.show();
+        rows = aggregateData(rows);
+        rows.show();
+        storeAggregatedData(rows);
     }
 
-    private void store1mAggregatedData() {
-
+    private Dataset<Row> aggregateData(Dataset<Row> rows) {
+        HashMap<String,String> aggregationMap = getAggregationMap(fromTableName);
+        rows = rows.agg(aggregationMap);
+        rows.withColumnRenamed("avg(W)","W");
+        return rows;
     }
 
-    private void fetch1mData() {
-        this.startTS=UtilsHandler.tsInSeconds(2017, 10, 1, 0, 0, 0);//base timestamp
-        Properties properties = new Properties();
-        properties.setProperty("user", mySQLHandler.username);
-        properties.setProperty("password", mySQLHandler.password);
-        Dataset<Row> rows = spark.sqlContext.read().jdbc(mySQLHandler.url, fromTableName, properties);
+    private HashMap<String, String> getAggregationMap(String tableName) {
+        HashMap<String,String> aggregationMap = new HashMap<String, String>();
+        aggregationMap.put("W","avg");
+        aggregationMap.put("W1","avg");
+        aggregationMap.put("W2","avg");
+        aggregationMap.put("W3","avg");
+        aggregationMap.put("V1","avg");
+        aggregationMap.put("V2","avg");
+        aggregationMap.put("V3","avg");
+        aggregationMap.put("A","avg");
+        aggregationMap.put("A1","avg");
+        aggregationMap.put("A2","avg");
+        aggregationMap.put("A3","avg");
+        return aggregationMap;
+    }
+
+    private void storeAggregatedData(Dataset<Row> rows) {
+
+    }
+    private Dataset<Row> fetchDataForAggregation() {
+        Dataset<Row> rows = getRows(fromTableName);
         rows = rows.where("sensor_id="+"'"+sensorId+"' and "+
                 timeField + " >= " + startTS + " and " + timeField + " < " + (startTS + ConfigHandler.AGGREGATION_RANGE_IN_SECONDS));
-        
+        return rows;
     }
 
     public String getTimeField() {
@@ -92,5 +113,14 @@ public class Sensor {
 
     public void setStartTS(double startTS) {
         this.startTS = startTS;
+    }
+
+
+    private Dataset<Row> getRows(String tableName){
+        Properties properties = new Properties();
+        properties.setProperty("user", mySQLHandler.username);
+        properties.setProperty("password", mySQLHandler.password);
+        Dataset<Row> rows = spark.sparkSession.read().jdbc(mySQLHandler.url, tableName, properties);
+        return  rows;
     }
 }

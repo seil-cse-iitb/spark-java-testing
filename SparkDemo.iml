@@ -14,14 +14,14 @@
     <orderEntry type="module-library">
       <library>
         <CLASSES>
-          <root url="file://$MODULE_DIR$/../simple-spark-app/jars" />
+          <root url="file://$MODULE_DIR$/jars" />
         </CLASSES>
         <JAVADOC />
         <SOURCES>
-          <root url="file://$MODULE_DIR$/../simple-spark-app/jars" />
+          <root url="file://$MODULE_DIR$/jars" />
         </SOURCES>
-        <jarDirectory url="file://$MODULE_DIR$/../simple-spark-app/jars" recursive="false" />
-        <jarDirectory url="file://$MODULE_DIR$/../simple-spark-app/jars" recursive="false" type="SOURCES" />
+        <jarDirectory url="file://$MODULE_DIR$/jars" recursive="false" />
+        <jarDirectory url="file://$MODULE_DIR$/jars" recursive="false" type="SOURCES" />
       </library>
     </orderEntry>
     <orderEntry type="library" name="Maven: junit:junit:4.12" level="project" />
@@ -160,7 +160,7 @@
     <orderEntry type="module-library">
       <library name="Maven: jdk.tools:jdk.tools:1.8">
         <CLASSES>
-          <root url="jar:///usr/lib/jvm/java-1.8.0-openjdk-amd64/lib/tools.jar!/" />
+          <root url="jar:///usr/lib/jvm/java-8-openjdk-amd64/lib/tools.jar!/" />
         </CLASSES>
         <JAVADOC />
         <SOURCES />

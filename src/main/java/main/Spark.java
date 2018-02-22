@@ -2,32 +2,26 @@ package main;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-import org.apache.spark.SparkConf;
-import org.apache.spark.api.java.JavaSparkContext;
-import org.apache.spark.sql.SQLContext;
+import org.apache.spark.sql.SparkSession;
 
 public class Spark {
-    SparkConf sparkConf;
-    JavaSparkContext javaSparkContext;
-    SQLContext sqlContext;
-
+    SparkSession sparkSession;
     public Spark() {
-        initConfig();
-        logginOFF();
+        initSession();
+        logsOff();
     }
 
-    public void initConfig() {
-        sparkConf = new SparkConf().setAppName("main.SparkDemo")
-                .set("spark.sql.warehouse.dir", "~/Desktop/spark-warehouse")
-                .set("spark.executor.memory", "2g")
-                .set("spark.driver.allowMultipleContexts", "true")
-                .setMaster("local[4]");
-        javaSparkContext = new JavaSparkContext(sparkConf);
-        sqlContext = new SQLContext(javaSparkContext);
+    public void initSession() {
+        sparkSession = SparkSession.builder().appName("Java Spark Demo")
+                .config("spark.sql.warehouse.dir", "~/Desktop/spark-warehouse")
+                .config("spark.executor.memory", "2g")
+                .config("spark.driver.allowMultipleContexts", "true")
+                .master("local[4]")
+                .getOrCreate();
     }
 
 
-    public void logginOFF(){
+    public void logsOff(){
         Logger.getLogger("org").setLevel(Level.OFF);
         Logger.getLogger("akka").setLevel(Level.OFF);
     }
