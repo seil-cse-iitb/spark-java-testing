@@ -11,15 +11,16 @@ public class UtilsHandler {
     public static String current_timestamp(){
         return new Date().toString();
     }
-    public static String tsToStr(float timestamp){
+    public static String tsToStr(double timestamp){
         return new Date((long)(timestamp*1000)).toString();
     }
-    public static float tsInSeconds(int year,int month,int day,int hour,int min,int sec){
+    public static double tsInSeconds(int year,int month,int day,int hour,int min,int sec){
         calendar.set(year,month-1,day,hour,min,sec);
-        return calendar.getTimeInMillis(); //TODO Test it properly
+        return calendar.getTime().getTime()/1000;
     }
 
     public static void exit_thread(){
+        System.exit(-1);
         Thread.currentThread().interrupt();
     }
 }

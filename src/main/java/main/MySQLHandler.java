@@ -7,6 +7,7 @@ public class MySQLHandler {
     String password;
     String databaseName;
     String username;
+    String url;
     private Connection con;
 
     public MySQLHandler(String host, String username, String password, String databaseName) {
@@ -14,17 +15,18 @@ public class MySQLHandler {
         this.password = password;
         this.databaseName = databaseName;
         this.username = username;
+        this.url ="jdbc:mysql://" + host + ":3306/"+this.databaseName ;
+        this.buildConnection();
     }
 
-    public Connection getConnection() {
+    public Connection buildConnection() {
         if (this.con != null) {
             return con;
         }
         this.con = null;
         try {
-            Class.forName("com.mysql.jdbc.Driver");
-            con = DriverManager.getConnection(
-                    "jdbc:mysql://" + host + ":3306/" + databaseName, username, password);
+//            Class.forName("com.mysql.jdbc.Driver"); //deprecated
+            con = DriverManager.getConnection(url, username, password);
         } catch (Exception e) {
             LogHandler.logError("[MySQL Connection]" + e.getMessage());
             UtilsHandler.exit_thread();

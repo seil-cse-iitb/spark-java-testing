@@ -3,26 +3,22 @@ package main;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.spark.SparkConf;
-import org.apache.spark.SparkContext;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.api.java.function.Function;
-import org.apache.spark.api.java.function.VoidFunction;
 import org.apache.spark.api.java.function.VoidFunction2;
-import org.apache.spark.sql.*;
-import org.apache.spark.sql.catalyst.expressions.aggregate.Average;
-import org.apache.spark.sql.execution.vectorized.ColumnarBatch;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
+import org.apache.spark.sql.RowFactory;
+import org.apache.spark.sql.SQLContext;
 import org.apache.spark.sql.types.DataTypes;
-import org.apache.spark.sql.types.FloatType;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 import org.apache.spark.storage.StorageLevel;
 import org.apache.spark.streaming.Duration;
-import org.apache.spark.streaming.StreamingContext;
 import org.apache.spark.streaming.Time;
 import org.apache.spark.streaming.api.java.JavaReceiverInputDStream;
 import org.apache.spark.streaming.api.java.JavaStreamingContext;
-import org.apache.spark.streaming.dstream.ReceiverInputDStream;
 import org.apache.spark.streaming.mqtt.MQTTUtils;
 
 import java.util.Arrays;
@@ -36,10 +32,8 @@ public class SparkDemo {
         SparkConf sparkConf = new SparkConf().setAppName("main.SparkDemo")
                 .set("spark.sql.warehouse.dir", "~/Desktop/spark-warehouse")
                 .set("spark.executor.memory", "2g")
-                .set("spark.driver.allowMultipleContexts", "true");
-        if (!sparkConf.contains("spark.master")) {
-            sparkConf.setMaster("local[4]");
-        }
+                .set("spark.driver.allowMultipleContexts", "true")
+                .setMaster("local[4]");
         Logger.getLogger("org").setLevel(Level.OFF);
         Logger.getLogger("akka").setLevel(Level.OFF);
 
@@ -48,15 +42,16 @@ public class SparkDemo {
         JavaStreamingContext jssc = new JavaStreamingContext(sc, new Duration(3000));
         jssc.checkpoint("checkpoint");
 
+
         JavaReceiverInputDStream<String> messages = MQTTUtils.createStream(jssc, brokerUrl, topic, StorageLevel.MEMORY_AND_DISK());
         final Function<String, Row> stringRowFunction = new Function<String, Row>() {
             public Row call(String s) throws Exception {
                 String[] strList = s.split(",");
-                Float[] floatList = new Float[strList.length];
+                Double[] doubleList = new Double[strList.length];
                 for (int i = 0; i < strList.length; i++) {
-                    floatList[i] = Float.parseFloat(strList[i]);
+                    doubleList[i] = Double.parseDouble(strList[i]);
                 }
-                return RowFactory.create(floatList);
+                return RowFactory.create(doubleList);
             }
         };
         messages.foreachRDD(new VoidFunction2<JavaRDD<String>, Time>() {
@@ -71,7 +66,7 @@ public class SparkDemo {
                 rows.show();
 
                 if(rows.count()>0)
-                    System.out.println(rows.first().getFloat(1));
+                    System.out.println(rows.first().getDouble(1));
                 HashMap<String,String> aggregationMap = new HashMap<String, String>();
                 aggregationMap.put("W","avg");
                 Dataset<Row> aggRows = rows.agg(aggregationMap);
@@ -116,41 +111,41 @@ public class SparkDemo {
         }
     }
     public static StructType getDataSchema(){
-        StructField srl = DataTypes.createStructField("srl", DataTypes.FloatType, true);
-        StructField timestamp = DataTypes.createStructField("timestamp", DataTypes.FloatType, true);
-        StructField VA = DataTypes.createStructField("VA", DataTypes.FloatType, true);
-        StructField W = DataTypes.createStructField("W", DataTypes.FloatType, true);
-        StructField VAR = DataTypes.createStructField("VAR", DataTypes.FloatType, true);
-        StructField PF = DataTypes.createStructField("PF", DataTypes.FloatType, true);
-        StructField VLL = DataTypes.createStructField("VLL", DataTypes.FloatType, true);
-        StructField VLN = DataTypes.createStructField("VLN", DataTypes.FloatType, true);
-        StructField A = DataTypes.createStructField("A", DataTypes.FloatType, true);
-        StructField F = DataTypes.createStructField("F", DataTypes.FloatType, true);
-        StructField VA1 = DataTypes.createStructField("VA1", DataTypes.FloatType, true);
-        StructField W1 = DataTypes.createStructField("W1", DataTypes.FloatType, true);
-        StructField VAR1 = DataTypes.createStructField("VAR1", DataTypes.FloatType, true);
-        StructField PF1 = DataTypes.createStructField("PF1", DataTypes.FloatType, true);
-        StructField V12 = DataTypes.createStructField("V12", DataTypes.FloatType, true);
-        StructField V1 = DataTypes.createStructField("V1", DataTypes.FloatType, true);
-        StructField A1 = DataTypes.createStructField("A1", DataTypes.FloatType, true);
-        StructField VA2 = DataTypes.createStructField("VA2", DataTypes.FloatType, true);
-        StructField W2 = DataTypes.createStructField("W2", DataTypes.FloatType, true);
-        StructField VAR2 = DataTypes.createStructField("VAR2", DataTypes.FloatType, true);
-        StructField PF2 = DataTypes.createStructField("PF2", DataTypes.FloatType, true);
-        StructField V23 = DataTypes.createStructField("V23", DataTypes.FloatType, true);
-        StructField V2 = DataTypes.createStructField("V2", DataTypes.FloatType, true);
-        StructField A2 = DataTypes.createStructField("A2", DataTypes.FloatType, true);
-        StructField VA3 = DataTypes.createStructField("VA3", DataTypes.FloatType, true);
-        StructField W3 = DataTypes.createStructField("W3", DataTypes.FloatType, true);
-        StructField VAR3 = DataTypes.createStructField("VAR3", DataTypes.FloatType, true);
-        StructField PF3 = DataTypes.createStructField("PF3", DataTypes.FloatType, true);
-        StructField V31 = DataTypes.createStructField("V31", DataTypes.FloatType, true);
-        StructField V3 = DataTypes.createStructField("V3", DataTypes.FloatType, true);
-        StructField A3 = DataTypes.createStructField("A3", DataTypes.FloatType, true);
-        StructField FwdVAh = DataTypes.createStructField("FwdVAh", DataTypes.FloatType, true);
-        StructField FwdWh = DataTypes.createStructField("FwdWh", DataTypes.FloatType, true);
-        StructField FwdVARhR = DataTypes.createStructField("FwdVARhR", DataTypes.FloatType, true);
-        StructField FwdVARhC = DataTypes.createStructField("FwdVARhC", DataTypes.FloatType, true);
+        StructField srl = DataTypes.createStructField("srl", DataTypes.DoubleType, true);
+        StructField timestamp = DataTypes.createStructField("timestamp", DataTypes.DoubleType, true);
+        StructField VA = DataTypes.createStructField("VA", DataTypes.DoubleType, true);
+        StructField W = DataTypes.createStructField("W", DataTypes.DoubleType, true);
+        StructField VAR = DataTypes.createStructField("VAR", DataTypes.DoubleType, true);
+        StructField PF = DataTypes.createStructField("PF", DataTypes.DoubleType, true);
+        StructField VLL = DataTypes.createStructField("VLL", DataTypes.DoubleType, true);
+        StructField VLN = DataTypes.createStructField("VLN", DataTypes.DoubleType, true);
+        StructField A = DataTypes.createStructField("A", DataTypes.DoubleType, true);
+        StructField F = DataTypes.createStructField("F", DataTypes.DoubleType, true);
+        StructField VA1 = DataTypes.createStructField("VA1", DataTypes.DoubleType, true);
+        StructField W1 = DataTypes.createStructField("W1", DataTypes.DoubleType, true);
+        StructField VAR1 = DataTypes.createStructField("VAR1", DataTypes.DoubleType, true);
+        StructField PF1 = DataTypes.createStructField("PF1", DataTypes.DoubleType, true);
+        StructField V12 = DataTypes.createStructField("V12", DataTypes.DoubleType, true);
+        StructField V1 = DataTypes.createStructField("V1", DataTypes.DoubleType, true);
+        StructField A1 = DataTypes.createStructField("A1", DataTypes.DoubleType, true);
+        StructField VA2 = DataTypes.createStructField("VA2", DataTypes.DoubleType, true);
+        StructField W2 = DataTypes.createStructField("W2", DataTypes.DoubleType, true);
+        StructField VAR2 = DataTypes.createStructField("VAR2", DataTypes.DoubleType, true);
+        StructField PF2 = DataTypes.createStructField("PF2", DataTypes.DoubleType, true);
+        StructField V23 = DataTypes.createStructField("V23", DataTypes.DoubleType, true);
+        StructField V2 = DataTypes.createStructField("V2", DataTypes.DoubleType, true);
+        StructField A2 = DataTypes.createStructField("A2", DataTypes.DoubleType, true);
+        StructField VA3 = DataTypes.createStructField("VA3", DataTypes.DoubleType, true);
+        StructField W3 = DataTypes.createStructField("W3", DataTypes.DoubleType, true);
+        StructField VAR3 = DataTypes.createStructField("VAR3", DataTypes.DoubleType, true);
+        StructField PF3 = DataTypes.createStructField("PF3", DataTypes.DoubleType, true);
+        StructField V31 = DataTypes.createStructField("V31", DataTypes.DoubleType, true);
+        StructField V3 = DataTypes.createStructField("V3", DataTypes.DoubleType, true);
+        StructField A3 = DataTypes.createStructField("A3", DataTypes.DoubleType, true);
+        StructField FwdVAh = DataTypes.createStructField("FwdVAh", DataTypes.DoubleType, true);
+        StructField FwdWh = DataTypes.createStructField("FwdWh", DataTypes.DoubleType, true);
+        StructField FwdVARhR = DataTypes.createStructField("FwdVARhR", DataTypes.DoubleType, true);
+        StructField FwdVARhC = DataTypes.createStructField("FwdVARhC", DataTypes.DoubleType, true);
 
 
         List<StructField> fields = Arrays.asList(srl,timestamp,VA,W,VAR,PF,
