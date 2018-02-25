@@ -64,7 +64,7 @@ public class Sensor {
         This function starts aggregation of archival data after the last aggregated row present corresponding to this sensor
          */
         this.fetchStartTimestamp();
-		LogHandler.logInfo("["+sensorId+"]aggregation started for minute "+UtilsHandler.tsToStr(this.startTS));
+		LogHandler.logInfo("["+sensorId+"]Aggregation started for minute "+UtilsHandler.tsToStr(this.startTS));
 		Dataset<Row> rows = fetchDataForAggregation();
 		rows = aggregateData(rows);
 		storeAggregatedData(rows);
