@@ -12,15 +12,19 @@ public class ReportHandler {
             String report_reciever_email = ConfigHandler.REPORT_RECEIVER_EMAIL;
             final String report_sender_email = "seil@cse.iitb.ac.in";
             Properties properties = System.getProperties();
-            properties.setProperty("mail.smtp.host", "imap.cse.iitb.ac.in");
-            properties.setProperty("mail.smtp.auth", "true");
-            Authenticator auth = new Authenticator() {
+	        properties.put("mail.smtp.host", "smtp.cse.iitb.ac.in"); //SMTP Host
+//	        properties.put("mail.smtp.socketFactory.port", "465"); //SSL Port
+//	        properties.put("mail.smtp.socketFactory.class",
+//			        "javax.net.ssl.SSLSocketFactory"); //SSL Factory Class
+	        properties.put("mail.smtp.auth", "true"); //Enabling SMTP Authentication
+	        properties.put("mail.smtp.port", "25"); //SMTP Port
+	        Authenticator auth = new Authenticator() {
 	            //override the getPasswordAuthentication method
 	            protected PasswordAuthentication getPasswordAuthentication() {
-		            return new PasswordAuthentication(report_sender_email, "");
+		            return new PasswordAuthentication(report_sender_email, "seilers");
 	            }
             };
-            Session session = Session.getDefaultInstance(properties);
+            Session session = Session.getDefaultInstance(properties,auth);
             MimeMessage message = new MimeMessage(session);
             message.setFrom(new InternetAddress(report_sender_email));
             message.addRecipient(Message.RecipientType.TO, new InternetAddress(report_reciever_email));
@@ -29,6 +33,7 @@ public class ReportHandler {
             Transport.send(message);
         } catch (MessagingException e){
             e.printStackTrace();
+            LogHandler.logInfo("[ReportEmailError]"+e.getMessage());
         }
     }
 

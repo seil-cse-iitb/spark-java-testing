@@ -132,20 +132,9 @@ public class Sensor {
 		return rows;
 	}
 
-	public String getTimeField() {
-		return timeField;
-	}
-
-	public void setTimeField(String timeField) {
-		this.timeField = timeField;
-	}
-
 	public double getStartTS() {
 		return startTS;
 	}
 
-	public void setStartTS(double startTS) {
-		this.startTS = startTS;
-	}
 
 }
