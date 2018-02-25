@@ -15,7 +15,7 @@ public class MySQLHandler {
         this.password = password;
         this.databaseName = databaseName;
         this.username = username;
-        this.url ="jdbc:mysql://" + host + ":3306/"+this.databaseName ;
+        this.url ="jdbc:mysql://" + host + ":3306/"+this.databaseName+"?useSSL=false"; ;
         this.buildConnection();
     }
 

@@ -1,9 +1,6 @@
 package main;
 
-import javax.mail.Message;
-import javax.mail.MessagingException;
-import javax.mail.Session;
-import javax.mail.Transport;
+import javax.mail.*;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
 import java.util.Properties;
@@ -13,9 +10,16 @@ public class ReportHandler {
     public static void report(String subject, String text) {
         try {
             String report_reciever_email = ConfigHandler.REPORT_RECEIVER_EMAIL;
-            String report_sender_email = "seil@cse.iitb.ac.in";
+            final String report_sender_email = "seil@cse.iitb.ac.in";
             Properties properties = System.getProperties();
             properties.setProperty("mail.smtp.host", "imap.cse.iitb.ac.in");
+            properties.setProperty("mail.smtp.auth", "true");
+            Authenticator auth = new Authenticator() {
+	            //override the getPasswordAuthentication method
+	            protected PasswordAuthentication getPasswordAuthentication() {
+		            return new PasswordAuthentication(report_sender_email, "");
+	            }
+            };
             Session session = Session.getDefaultInstance(properties);
             MimeMessage message = new MimeMessage(session);
             message.setFrom(new InternetAddress(report_sender_email));
