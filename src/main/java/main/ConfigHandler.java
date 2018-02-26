@@ -12,7 +12,8 @@ public class ConfigHandler {
 	final static float RATE_OF_DATA_PER_SECOND = 1;
 	final static String[] AGGREGATION_FORMULA_SCH = {
 			"first(sensor_id) as sensor_id",
-			"last(srl) as srl",
+			"first(srl) as srl",
+			"avg(F) as F",
 			"avg(W) as W",
 			"avg(W1) as W1",
 			"avg(W2) as W2",
@@ -24,6 +25,10 @@ public class ConfigHandler {
 			"avg(A1) as A1",
 			"avg(A2) as A2",
 			"avg(A3) as A3",
+			"avg(VAR) as VAR",
+			"avg(VAR1) as VAR1",
+			"avg(VAR2) as VAR2",
+			"avg(VAR3) as VAR3",
 			"avg(VA) as VA",
 			"avg(VA1) as VA1",
 			"avg(VA2) as VA2",
@@ -33,9 +38,13 @@ public class ConfigHandler {
 			"(avg(W2)/avg(VA2)) as PF2",
 			"(avg(W3)/avg(VA3)) as PF3",
 			"last(TS_RECV) as TS_RECV",
+			"last(FwdWh) as FwdVAh",
+			"last(FwdWh) as FwdVARhC",
+			"last(FwdWh) as FwdVARhR",
 			"last(FwdWh) as FwdWh",
 			"(last(FwdWh)-first(FwdWh)) as delta_FwdWh",
-			"(count(*)/" + (ConfigHandler.AGGREGATION_RANGE_IN_SECONDS / ConfigHandler.RATE_OF_DATA_PER_SECOND) + "*100) as data_percent",
+			"(count(*)/" + (ConfigHandler.AGGREGATION_RANGE_IN_SECONDS / ConfigHandler.RATE_OF_DATA_PER_SECOND)
+					+ "*100) as data_percent",
 	};
 
 

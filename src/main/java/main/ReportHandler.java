@@ -17,8 +17,9 @@ public class ReportHandler {
 			//Get the session object
 			Properties props = new Properties();
 			props.put("mail.smtp.host", "imap.cse.iitb.ac.in");
+			props.put("mail.smtp.port", "25");
 			props.put("mail.smtp.auth", "true");
-
+			props.put("mail.smtp.starttls.enable", "true");
 			Session session = Session.getDefaultInstance(props,
 					new javax.mail.Authenticator() {
 						protected PasswordAuthentication getPasswordAuthentication() {
@@ -27,7 +28,7 @@ public class ReportHandler {
 					});
 			//Compose the message
 			MimeMessage message = new MimeMessage(session);
-			message.setFrom(new InternetAddress(report_reciever_email));
+			message.setFrom(new InternetAddress(report_sender_email));
 			message.addRecipient(Message.RecipientType.TO, new InternetAddress(report_reciever_email));
 			message.setSubject(subject);
 			message.setText("[" + UtilsHandler.current_timestamp() + "]" + text);
