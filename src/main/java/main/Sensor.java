@@ -38,6 +38,8 @@ public class Sensor {
 		try {
 			String sql = "select " + timeField + " from " + toTableName + " order by " + this.timeField + " desc limit 1";
 			ResultSet resultSet = mySQLHandler.query(sql);
+//			Dataset<Row> rows = spark.getRowsByTableName(toTableName);
+//			rows.select(timeField).sort(timeField).limit(1);
 			if (resultSet.next()) {
 				this.startTS = resultSet.getDouble(timeField) + 1; //+1 because we want to aggregate from the next second
 			} else {
@@ -71,52 +73,26 @@ public class Sensor {
 	}
 
 	private Dataset<Row> aggregateData(Dataset<Row> rows) {
-		HashMap<String, String> aggregationMap = getAggregationMap(fromTableName);
+		String[] aggregationFormula = getAggregationFormula(fromTableName);
 		rows.createOrReplaceTempView("sensor_data");
 		String sql = "select";
-		Set<String> keySet = aggregationMap.keySet();
-		for (Iterator<String> iterator = keySet.iterator(); iterator.hasNext(); ) {
-			String key = iterator.next();
-			String value = aggregationMap.get(key);
-			String valueAsKey = " " + value + " as " + key + ",";
-			sql = sql + valueAsKey;
+
+		for (int i = 0; i < aggregationFormula.length; i++) {
+			sql = sql + " "+aggregationFormula[i]+", ";
 		}
-		sql = sql.substring(0, sql.length() - 1);
-		sql = sql + " from sensor_data";
-//		LogHandler.logInfo("[AggregationQuery]" + sql);
+		sql = sql + (startTS + ConfigHandler.AGGREGATION_RANGE_IN_SECONDS)+" as "+timeField+"  from sensor_data";
+		LogHandler.logInfo("[AggregationQuery]" + sql);
 		rows = spark.sparkSession.sql(sql);
 		return rows;
 	}
 
-	private HashMap<String, String> getAggregationMap(String tableName) {
-		HashMap<String, String> aggregationMap = new HashMap<String, String>();
-		aggregationMap.put("sensor_id", "first(sensor_id)");
-		aggregationMap.put("TS_RECV", "last(TS_RECV)");
-		aggregationMap.put("TS", (startTS + ConfigHandler.AGGREGATION_RANGE_IN_SECONDS)+"");
-		aggregationMap.put("W", "avg(W)");
-		aggregationMap.put("W1", "avg(W1)");
-		aggregationMap.put("W2", "avg(W2)");
-		aggregationMap.put("W3", "avg(W3)");
-		aggregationMap.put("V1", "avg(V1)");
-		aggregationMap.put("V2", "avg(V2)");
-		aggregationMap.put("V3", "avg(V3)");
-		aggregationMap.put("A", "avg(A)");
-		aggregationMap.put("A1", "avg(A1)");
-		aggregationMap.put("A2", "avg(A2)");
-		aggregationMap.put("A3", "avg(A3)");
-		aggregationMap.put("VA", "avg(VA)");
-		aggregationMap.put("VA1", "avg(VA1)");
-		aggregationMap.put("VA2", "avg(VA2)");
-		aggregationMap.put("VA3", "avg(VA3)");
-		aggregationMap.put("PF", "avg(W)/avg(VA)");
-		aggregationMap.put("PF1", "avg(W1)/avg(VA1)");
-		aggregationMap.put("PF2", "avg(W2)/avg(VA2)");
-		aggregationMap.put("PF3", "avg(W3)/avg(VA3)");
-		aggregationMap.put("FwdWh", "last(FwdWh)");
-		aggregationMap.put("delta_FwdWh", "last(FwdWh)-first(FwdWh)");
-		aggregationMap.put("data_percent"
-				, "count(*)/"+(ConfigHandler.AGGREGATION_RANGE_IN_SECONDS/ConfigHandler.RATE_OF_DATA_PER_SECOND)+"*100");
-		return aggregationMap;
+	private String[] getAggregationFormula(String tableName) {
+		if(tableName.equalsIgnoreCase("sch_3")){
+			return ConfigHandler.AGGREGATION_FORMULA_SCH;
+		}else {
+			LogHandler.logError("[AggregationFormula] not found for table: " + tableName);
+			return null;
+		}
 	}
 
 	private void storeAggregatedData(Dataset<Row> rows) {
