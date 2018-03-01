@@ -4,16 +4,13 @@ import org.apache.spark.sql.DataFrameWriter;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 
-import java.sql.ResultSet;
-import java.sql.SQLException;
-
 public class Sensor {
 
 	String fromTableName;
 	String sensorId;
 	String toTableName;
 	double startTS;
-	MySQLHandler mySQLHandler;
+//	MySQLHandler mySQLHandler;
 	String timeField;
 	Spark spark;
 
@@ -23,37 +20,31 @@ public class Sensor {
 		this.toTableName = toTableName;
 		this.timeField = "ts";
 		this.startTS = -1;
-		mySQLHandler = new MySQLHandler(ConfigHandler.MYSQL_HOST, ConfigHandler.MYSQL_USERNAME, ConfigHandler.MYSQL_PASSWORD, ConfigHandler.MYSQL_DATABASE_NAME);
 		this.spark = new Spark();
 		fetchStartTimestamp();
-//		this.startTS = UtilsHandler.tsInSeconds(2017, 10, 3, 0, 0, 0);//base timestamp
 	}
 
 	public void fetchStartTimestamp() {
-		try {
-			String sql = "select " + timeField + " from " + toTableName + " where sensor_id='" + this.sensorId + "' order by " + this.timeField + " desc limit 1";
-			ResultSet resultSet = mySQLHandler.query(sql);
-//			Dataset<Row> rows = spark.getRowsByTableName(toTableName);
-//			Dataset<Row> rows1 = rows.select(timeField).orderBy(rows.col(timeField).desc()).limit(1);
-//			Row first = rows1.first();
-			if (resultSet.next()) {
-				this.startTS = resultSet.getDouble(timeField); //+1 because we want to aggregate from the next second
+			Dataset<Row> rows = spark.getRowsByTableName(toTableName);
+			rows = rows.select(timeField).where(rows.col("sensor_id").equalTo(sensorId)).orderBy(rows.col(timeField).desc()).limit(1);
+			Row firstRow = rows.first();
+			if (firstRow!=null) {
+				//if startTS comes from toTableName then we want to aggregate from the next interval(for ex.:next minute);
+				this.startTS = firstRow.getDouble(firstRow.fieldIndex(timeField));
+				this.startTS += ConfigHandler.GRANULARITY_IN_SECONDS;
 			} else {
-				resultSet.close();
-				//toTableName is empty table then fetch first ts from fromTableName
-				sql = "select " + timeField + " from " + fromTableName + " where sensor_id='" + this.sensorId + "' order by " + this.timeField + " asc limit 1";
-				resultSet = mySQLHandler.query(sql);
-				if (resultSet.next()) {
-					this.startTS = resultSet.getDouble(timeField); //No +1 because we want to aggregate from this second itself
+				//toTableName is empty table then fetch first timestamp from fromTableName
+				//if startTS comes from fromTableName then we want to aggregate from the same interval(for ex.:same minute);
+				rows = spark.getRowsByTableName(fromTableName);
+				rows = rows.select(timeField).where("sensor_id = '"+this.sensorId+"'").orderBy(rows.col(timeField).desc()).limit(1);
+				firstRow = rows.first();
+				if (firstRow!=null) {
+					this.startTS = firstRow.getDouble(firstRow.fieldIndex(timeField));
 				} else {
 					this.startTS = UtilsHandler.tsInSeconds(2016, 10, 1, 0, 0, 0);//base timestamp
 				}
 			}
-			this.startTS = this.startTS - this.startTS % ConfigHandler.AGGREGATION_RANGE_IN_SECONDS;
-		} catch (SQLException e) {
-			LogHandler.logError("[MySQL][Query][SensorClass]" + e.getMessage());
-			UtilsHandler.exit_thread();
-		}
+			this.startTS = this.startTS - this.startTS % ConfigHandler.GRANULARITY_IN_SECONDS;
 	}
 
 
@@ -67,33 +58,38 @@ public class Sensor {
 		}
 		Dataset<Row> rows = fetchDataForAggregation();
 		if (rows.count() > 0) {
-			rows = aggregateData(rows);
+//			rows = aggregateDataUsingSQL(rows);
+			rows= aggregateDataUsingDataFrame(rows);
 			storeAggregatedData(rows);
 		}
 		this.goToNextMinute();
 	}
 
-	public void goToNextMinute(){
-		this.startTS+=ConfigHandler.AGGREGATION_RANGE_IN_SECONDS;
+	private Dataset<Row> aggregateDataUsingDataFrame(Dataset<Row> rows) {
+//		DataFrame
+		return null;
 	}
 
-	private Dataset<Row> aggregateData(Dataset<Row> rows) {
-		String[] aggregationFormula = getAggregationFormula(fromTableName);
+	public void goToNextMinute(){
+		this.startTS+=ConfigHandler.GRANULARITY_IN_SECONDS;
+	}
+
+	private Dataset<Row> aggregateDataUsingSQL(Dataset<Row> rows) {
+		String[] aggregationFormula = getSQLAggregationFormula(fromTableName);
 		rows.createOrReplaceTempView("sensor_data_" + this.sensorId);
 		String sql = "select ";
 
 		for (int i = 0; i < aggregationFormula.length; i++) {
 			sql = sql + " " + aggregationFormula[i] + ", ";
 		}
-		sql = sql + (startTS + ConfigHandler.AGGREGATION_RANGE_IN_SECONDS) + " as " + timeField + "  from sensor_data_" + this.sensorId;
-//		LogHandler.logInfo("[AggregationQuery]" + sql);
+		sql = sql + startTS + " as " + timeField + "  from sensor_data_" + this.sensorId;
 		rows = spark.sparkSession.sql(sql);
 		return rows;
 	}
 
-	private String[] getAggregationFormula(String tableName) {
+	private String[] getSQLAggregationFormula(String tableName) {
 		if (tableName.equalsIgnoreCase("sch_3")) {
-			return ConfigHandler.AGGREGATION_FORMULA_SCH;
+			return ConfigHandler.SQL_AGGREGATION_FORMULA_SCH;
 		} else {
 			LogHandler.logError("[AggregationFormula] not found for table: " + tableName);
 			return null;
@@ -102,13 +98,13 @@ public class Sensor {
 
 	private void storeAggregatedData(Dataset<Row> rows) {
 		DataFrameWriter<Row> df = new DataFrameWriter<Row>(rows);
-		df.mode("append").jdbc(mySQLHandler.url, toTableName, spark.getProperties());
+		df.mode("append").jdbc(ConfigHandler.MYSQL_URL, toTableName, spark.getProperties());
 	}
 
-	private Dataset<Row> fetchDataForAggregation() {
+	public Dataset<Row> fetchDataForAggregation() {
 		Dataset<Row> rows = spark.getRowsByTableName(fromTableName);
 		rows = rows.where("sensor_id= '" + sensorId + "' and " +
-				timeField + " >= " + startTS + " and " + timeField + " < " + (startTS + ConfigHandler.AGGREGATION_RANGE_IN_SECONDS));
+				timeField + " >= " + startTS + " and " + timeField + " < " + (startTS + ConfigHandler.GRANULARITY_IN_SECONDS));
 		rows = rows.sort(timeField);
 		return rows;
 	}

@@ -1,5 +1,6 @@
 package main;
 
+import org.apache.kerby.config.Conf;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.spark.sql.Dataset;
@@ -39,8 +40,7 @@ public class Spark {
     }
     public  Dataset<Row> getRowsByTableName(String tableName){
         Properties properties =getProperties();
-        String url  = "jdbc:mysql://" + ConfigHandler.MYSQL_HOST+ ":3306/"+ConfigHandler.MYSQL_DATABASE_NAME+"?useSSL=false";
-        Dataset<Row> rows = this.sparkSession.read().jdbc(url, tableName, properties);
+        Dataset<Row> rows = this.sparkSession.read().jdbc(ConfigHandler.MYSQL_URL, tableName, properties);
         return  rows;
     }
 }
