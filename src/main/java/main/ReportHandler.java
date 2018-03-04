@@ -41,7 +41,9 @@ public class ReportHandler {
 
 	public static void reportError(String text) {
 		String scriptIdentityText = ConfigHandler.SCRIPT_IDENTITY_TEXT;
-		ReportHandler.report(scriptIdentityText, "[Error]" + text);
+		if(ConfigHandler.REPORT_ERROR) {
+			ReportHandler.report(scriptIdentityText, "[Error]" + text);
+		}
 	}
 
 	public static void reportInfo(String text) {
