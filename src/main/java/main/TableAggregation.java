@@ -1,9 +1,6 @@
 package main;
 
-import org.apache.spark.sql.DataFrameWriter;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.DatasetHolder;
-import org.apache.spark.sql.Row;
+import org.apache.spark.sql.*;
 
 import javax.rmi.CORBA.Util;
 
@@ -27,20 +24,22 @@ public class TableAggregation {
 
     public void fetchStartTimestamp() {
         Dataset<Row> rows = spark.getRowsByTableName(toTableName);
-        rows = rows.select(timeField).orderBy(rows.col(timeField).desc()).limit(1);
-        Row firstRow = rows.first();
-        if (firstRow != null) {
+        rows = rows.select(functions.max(timeField));
+
+        if (rows.count() > 0) {
             //if startTS comes from toTableName then we want to aggregate from the next interval(for ex.:next minute);
-            this.startTS = firstRow.getDouble(firstRow.fieldIndex(timeField));
+            Row firstRow = rows.first();
+            this.startTS = firstRow.getDouble(0);
             this.startTS += ConfigHandler.GRANULARITY_IN_SECONDS;
         } else {
             //toTableName is empty table then fetch first timestamp from fromTableName
             //if startTS comes from fromTableName then we want to aggregate from the same interval(for ex.:same minute);
             rows = spark.getRowsByTableName(fromTableName);
-            rows = rows.select(timeField).orderBy(rows.col(timeField).desc()).limit(1);
-            firstRow = rows.first();
-            if (firstRow != null) {
-                this.startTS = firstRow.getDouble(firstRow.fieldIndex(timeField));
+            rows = rows.select(functions.min(timeField));
+            if (rows.count() > 0) {
+	            Row firstRow = rows.head();
+                firstRow = rows.first();
+                this.startTS = firstRow.getDouble(0);
             } else {
                 this.startTS = UtilsHandler.tsInSeconds(2016, 10, 1, 0, 0, 0);//base timestamp
             }
