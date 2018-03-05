@@ -1,7 +1,7 @@
 package test;
 
+
 import main.LogHandler;
-import main.SensorAggregation;
 import main.TableAggregation;
 
 public class TableAggregationTest {
@@ -26,5 +26,10 @@ public class TableAggregationTest {
 				}
 			});
 			thread.start();
+		try {
+			thread.join();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
 	}
 }

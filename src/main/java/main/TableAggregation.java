@@ -9,48 +9,49 @@ import java.sql.SQLException;
 
 public class TableAggregation {
 
-	String fromTableName;
-	String toTableName;
-	double startTS;
-	MySQLHandler mySQLHandler;
-	String timeField;
-	Spark spark;
+    String fromTableName;
+    String toTableName;
+    double startTS;
+    MySQLHandler mySQLHandler;
+    String timeField;
+    Spark spark;
 
-	public TableAggregation(String fromTableName,String toTableName) {
-		this.fromTableName = fromTableName;
-		this.toTableName = toTableName;
-		this.timeField = "ts";
-		this.startTS = -1;
-		mySQLHandler = new MySQLHandler(ConfigHandler.MYSQL_HOST, ConfigHandler.MYSQL_USERNAME, ConfigHandler.MYSQL_PASSWORD, ConfigHandler.MYSQL_DATABASE_NAME);
-		this.spark = new Spark();
-		fetchStartTimestamp();
-//		this.startTS = UtilsHandler.tsInSeconds(2017, 10, 3, 0, 0, 0);//base timestamp
-	}
+    public TableAggregation(String fromTableName, String toTableName) {
+        this.fromTableName = fromTableName;
+        this.toTableName = toTableName;
+        this.timeField = "ts";
+        this.startTS = -1;
+        mySQLHandler = new MySQLHandler(ConfigHandler.MYSQL_HOST, ConfigHandler.MYSQL_USERNAME, ConfigHandler.MYSQL_PASSWORD, ConfigHandler.MYSQL_DATABASE_NAME);
+        this.spark = new Spark();
+        fetchStartTimestamp();
+    }
 
-	public void fetchStartTimestamp() {
-		try {
-			String sql = "select max(" + timeField + ") from " + toTableName;
-			ResultSet resultSet = mySQLHandler.query(sql);
-			if (resultSet.next()) {
-				this.startTS = resultSet.getDouble(timeField); //+1 because we want to aggregate from the next second
-				this.startTS += ConfigHandler.GRANULARITY_IN_SECONDS;
-			} else {
-				resultSet.close();
-				//toTableName is empty table then fetch first ts from fromTableName
-				sql = "select min(" + timeField + ") from " + fromTableName;
-				resultSet = mySQLHandler.query(sql);
-				if (resultSet.next()) {
-					this.startTS = resultSet.getDouble(timeField); //No +1 because we want to aggregate from this second itself
-				} else {
-					this.startTS = UtilsHandler.tsInSeconds(2016, 10, 1, 0, 0, 0);//base timestamp
-				}
-			}
-			this.startTS = this.startTS - this.startTS % ConfigHandler.GRANULARITY_IN_SECONDS;
-		} catch (SQLException e) {
-			LogHandler.logError("[MySQL][Query][SensorClass]" + e.getMessage());
-			UtilsHandler.exit_thread();
-		}
-	}
+    public void fetchStartTimestamp() {
+        double baseTimestamp = UtilsHandler.tsInSeconds(2016, 10, 1, 0, 0, 0);//base timestamp
+        try {
+            String sql = "select max(" + timeField + ") from " + toTableName;
+            ResultSet resultSet = mySQLHandler.query(sql);
+            resultSet.next();
+            this.startTS = resultSet.getDouble("max(" + timeField + ")");
+            if (this.startTS > baseTimestamp) {
+                this.startTS += ConfigHandler.GRANULARITY_IN_SECONDS;
+            } else {
+                resultSet.close();
+                //toTableName is empty table then fetch first ts from fromTableName
+                sql = "select min(" + timeField + ") from " + fromTableName;
+                resultSet = mySQLHandler.query(sql);
+                resultSet.next();
+                this.startTS = resultSet.getDouble("min(" + timeField + ")");
+                if (this.startTS < baseTimestamp) {
+                    this.startTS = baseTimestamp;
+                }
+            }
+            this.startTS = this.startTS - this.startTS % ConfigHandler.GRANULARITY_IN_SECONDS;
+        } catch (SQLException e) {
+            LogHandler.logError("[MySQL][Query][TableAggregation][FetchStartTimestamp]" + e.getMessage());
+            UtilsHandler.exit_thread();
+        }
+    }
 
 
     public void startArchivalAggregation() {
@@ -64,15 +65,9 @@ public class TableAggregation {
         Dataset<Row> rows = fetchDataForAggregation();
         if (rows.count() > 0) {
             rows = aggregateDataUsingSQL(rows);
-//			rows= aggregateDataUsingDataFrame(rows);
             storeAggregatedData(rows);
         }
         this.goToNextMinute();
-    }
-
-    private Dataset<Row> aggregateDataUsingDataFrame(Dataset<Row> rows) {
-//		DataFrame
-        return null;
     }
 
     public void goToNextMinute() {
@@ -109,7 +104,6 @@ public class TableAggregation {
     public Dataset<Row> fetchDataForAggregation() {
         Dataset<Row> rows = spark.getRowsByTableName(fromTableName);
         rows = rows.where(timeField + " >= " + startTS + " and " + timeField + " < " + (startTS + ConfigHandler.GRANULARITY_IN_SECONDS));
-        rows = rows.sort(timeField);
         return rows;
     }
 
