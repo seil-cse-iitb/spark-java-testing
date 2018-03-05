@@ -11,6 +11,7 @@ import java.util.Properties;
 public class ReportHandler {
 
 	public static void report(String subject, String text) {
+		LogHandler.logInfo("[Report]Sending Report");
 		try {
 			String report_reciever_email = ConfigHandler.REPORT_RECEIVER_EMAIL;
 			final String report_sender_email = "seil@cse.iitb.ac.in";
@@ -33,15 +34,20 @@ public class ReportHandler {
 			message.setSubject(subject);
 			message.setText("[" + UtilsHandler.current_timestamp() + "]" + text);
 			Transport.send(message);
+			LogHandler.logInfo("[Report]Report Sent");
 		} catch (Exception e) {
 			e.printStackTrace();
 			LogHandler.logInfo("[ReportEmailError]" + e.getMessage());
 		}
+		LogHandler.logInfo("Subject:"+subject);
+		LogHandler.logInfo("Text:"+text);
 	}
 
 	public static void reportError(String text) {
 		String scriptIdentityText = ConfigHandler.SCRIPT_IDENTITY_TEXT;
-		ReportHandler.report(scriptIdentityText, "[Error]" + text);
+		if(ConfigHandler.REPORT_ERROR) {
+			ReportHandler.report(scriptIdentityText, "[Error]" + text);
+		}
 	}
 
 	public static void reportInfo(String text) {
