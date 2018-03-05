@@ -7,7 +7,7 @@ import org.apache.spark.sql.Row;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
-public class Sensor {
+public class SensorAggregation {
 
 	String fromTableName;
 	String sensorId;
@@ -17,7 +17,7 @@ public class Sensor {
 	String timeField;
 	Spark spark;
 
-	public Sensor(String fromTableName, String sensorId, String toTableName) {
+	public SensorAggregation(String fromTableName, String sensorId, String toTableName) {
 		this.fromTableName = fromTableName;
 		this.sensorId = sensorId;
 		this.toTableName = toTableName;

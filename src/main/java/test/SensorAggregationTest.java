@@ -1,9 +1,9 @@
 package test;
 
 import main.LogHandler;
-import main.Sensor;
+import main.SensorAggregation;
 
-public class test {
+public class SensorAggregationTest {
 	public static void main(String[] args) {
 		final String[] sensorId = {
 				"power_k_a",
@@ -61,10 +61,10 @@ public class test {
 					try {
 
 						LogHandler.logInfo("[Thread][Start] started for sensor_id:" + sensorId[finalI]);
-						Sensor sensor = new Sensor(fromTableName, sensorId[finalI], toTableName);
+						SensorAggregation sensorAggregation = new SensorAggregation(fromTableName, sensorId[finalI], toTableName);
 						int i = 1051200;
 						while (i > 0) {
-							sensor.startArchivalAggregation();
+							sensorAggregation.startArchivalAggregation();
 							i--;
 						}
 						LogHandler.logInfo("[Thread][End] ended for sensor_id:" + sensorId[finalI]);
