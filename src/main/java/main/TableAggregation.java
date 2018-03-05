@@ -62,11 +62,19 @@ public class TableAggregation {
         if (this.startTS > UtilsHandler.tsInSeconds(2018, 2, 26, 0, 0, 0)) {
             return;
         }
+        long startEpoch = System.currentTimeMillis();
         Dataset<Row> rows = fetchDataForAggregation();
+        long fetchEndEpoch = System.currentTimeMillis();
+        long aggEndEpoch = 0,storeEndEpoch = 0;
         if (rows.count() > 0) {
             rows = aggregateDataUsingSQL(rows);
+            aggEndEpoch = System.currentTimeMillis();
             storeAggregatedData(rows);
+            storeEndEpoch = System.currentTimeMillis();
         }
+        LogHandler.logInfo("[FetchingTime("+(fetchEndEpoch-startEpoch)+")]"+
+                "[AggregationTime("+(aggEndEpoch-startEpoch)+")]"+
+                "[StoringTime("+(storeEndEpoch-startEpoch)+")]");
         this.goToNextMinute();
     }
 
@@ -104,7 +112,7 @@ public class TableAggregation {
     public Dataset<Row> fetchDataForAggregation() {
         Dataset<Row> rows = spark.getRowsByTableName(fromTableName);
         rows = rows.where(timeField + " >= " + startTS + " and " + timeField + " < " + (startTS + ConfigHandler.GRANULARITY_IN_SECONDS));
-        return rows;
+          return rows;
     }
 
     public double getStartTS() {
