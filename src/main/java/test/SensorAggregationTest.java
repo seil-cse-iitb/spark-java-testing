@@ -52,7 +52,7 @@ public class SensorAggregationTest {
 				"power_lcc_302_p"
 		};
 
-		for (int i = 0; i < sensorId.length; i++) {
+		for (int i = 0; i < 2; i++) {
 			final int finalI = i;
 			Thread thread = new Thread(new Runnable() {
 				public void run() {
