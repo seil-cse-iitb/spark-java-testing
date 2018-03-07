@@ -16,6 +16,7 @@ public class SensorAggregation {
 	MySQLHandler mySQLHandler;
 	String timeField;
 	Spark spark;
+	Dataset<Row> fromTableRows ;
 
 	public SensorAggregation(String fromTableName, String sensorId, String toTableName) {
 		this.fromTableName = fromTableName;
@@ -26,6 +27,7 @@ public class SensorAggregation {
 		mySQLHandler = new MySQLHandler(ConfigHandler.MYSQL_HOST, ConfigHandler.MYSQL_USERNAME, ConfigHandler.MYSQL_PASSWORD, ConfigHandler.MYSQL_DATABASE_NAME);
 		this.spark = new Spark();
 		fetchStartTimestamp();
+		fromTableRows = spark.getRowsByTableName(fromTableName);
 //		this.startTS = UtilsHandler.tsInSeconds(2017, 10, 3, 0, 0, 0);//base timestamp
 	}
 
@@ -110,8 +112,7 @@ public class SensorAggregation {
     }
 
 	private Dataset<Row> fetchDataForAggregation() {
-		Dataset<Row> rows = spark.getRowsByTableName(fromTableName);
-		rows = rows.where("sensor_id= '" + sensorId + "' and " +
+		Dataset<Row> rows = fromTableRows.where("sensor_id= '" + sensorId + "' and " +
 				timeField + " >= " + startTS + " and " + timeField + " < " + (startTS + ConfigHandler.GRANULARITY_IN_SECONDS));
 		rows = rows.sort(timeField);
 		return rows;
