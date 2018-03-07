@@ -32,28 +32,28 @@ public class SensorAggregation {
 	}
 
 	public void fetchStartTimestamp() {
+		double baseTimestamp = UtilsHandler.tsInSeconds(2016, 10, 1, 0, 0, 0);//base timestamp
 		try {
-			String sql = "select " + timeField + " from " + toTableName + " where sensor_id='" + this.sensorId + "' order by " + this.timeField + " desc limit 1";
+			String sql = "select max(" + timeField + ") from " + toTableName +" where sensor_id='"+sensorId+"'";
 			ResultSet resultSet = mySQLHandler.query(sql);
-//			Dataset<Row> rows = spark.getRowsByTableName(toTableName);
-//			Dataset<Row> rows1 = rows.select(timeField).orderBy(rows.col(timeField).desc()).limit(1);
-//			Row first = rows1.first();
-			if (resultSet.next()) {
-				this.startTS = resultSet.getDouble(timeField); //+1 because we want to aggregate from the next second
+			resultSet.next();
+			this.startTS = resultSet.getDouble("max(" + timeField + ")");
+			if (this.startTS > baseTimestamp) {
+				this.startTS += ConfigHandler.GRANULARITY_IN_SECONDS;
 			} else {
 				resultSet.close();
 				//toTableName is empty table then fetch first ts from fromTableName
-				sql = "select " + timeField + " from " + fromTableName + " where sensor_id='" + this.sensorId + "' order by " + this.timeField + " asc limit 1";
+				sql = "select min(" + timeField + ") from " + fromTableName +" where sensor_id='"+sensorId+"'";
 				resultSet = mySQLHandler.query(sql);
-				if (resultSet.next()) {
-					this.startTS = resultSet.getDouble(timeField); //No +1 because we want to aggregate from this second itself
-				} else {
-					this.startTS = UtilsHandler.tsInSeconds(2016, 10, 1, 0, 0, 0);//base timestamp
+				resultSet.next();
+				this.startTS = resultSet.getDouble("min(" + timeField + ")");
+				if (this.startTS < baseTimestamp) {
+					this.startTS = baseTimestamp;
 				}
 			}
 			this.startTS = this.startTS - this.startTS % ConfigHandler.GRANULARITY_IN_SECONDS;
 		} catch (SQLException e) {
-			LogHandler.logError("[MySQL][Query][SensorClass]" + e.getMessage());
+			LogHandler.logError("[MySQL][Query][SensorAggregation][FetchStartTimestamp]" + e.getMessage());
 			UtilsHandler.exit_thread();
 		}
 	}
