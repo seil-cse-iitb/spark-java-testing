@@ -3,6 +3,7 @@ package main;
 import org.apache.spark.sql.DataFrameWriter;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.SaveMode;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -63,18 +64,25 @@ public class SensorAggregation {
         /*
         This function starts aggregation of archival data after the last aggregated row present corresponding to this sensor
          */
-        LogHandler.logInfo("[" + sensorId + "]Aggregation started for minute " + UtilsHandler.tsToStr(this.startTS));
+//        LogHandler.logInfo("[" + sensorId + "]Aggregation started for minute " + UtilsHandler.tsToStr(this.startTS));
         if (this.startTS > UtilsHandler.tsInSeconds(2018, 2, 26, 0, 0, 0)) {
             return;
         }
-        Dataset<Row> rows = fetchDataForAggregation();
-        if (rows.count() > 0) {
-            rows = aggregateDataUsingSQL(rows);
-//			rows= aggregateDataUsingDataFrame(rows);
-            storeAggregatedData(rows);
-        }
-        this.goToNextMinute();
-    }
+		long startEpoch = System.currentTimeMillis();
+		Dataset<Row> rows = fetchDataForAggregation();
+		long fetchEndEpoch = System.currentTimeMillis();
+		long aggEndEpoch = 0, storeEndEpoch = 0;
+		if (rows.count() > 0) {
+			rows = aggregateDataUsingSQL(rows);
+			aggEndEpoch = System.currentTimeMillis();
+			storeAggregatedData(rows);
+			storeEndEpoch = System.currentTimeMillis();
+		}
+		LogHandler.logInfo("["+sensorId+"]Aggregation ended for minute "+ UtilsHandler.tsToStr(this.startTS)+"\n[FetchingTime(" + (fetchEndEpoch - startEpoch) + ")]" +
+				"[AggregationTime(" + (aggEndEpoch - startEpoch) + ")]" +
+				"[StoringTime(" + (storeEndEpoch - startEpoch) + ")]");
+		this.goToNextMinute();
+	}
 
     private Dataset<Row> aggregateDataUsingDataFrame(Dataset<Row> rows) {
 //		DataFrame
@@ -107,15 +115,13 @@ public class SensorAggregation {
     }
 
     private void storeAggregatedData(Dataset<Row> rows) {
-        DataFrameWriter<Row> dataFrameWriter = new DataFrameWriter<Row>(rows);
-        dataFrameWriter=dataFrameWriter.mode("append");
-        dataFrameWriter.jdbc(ConfigHandler.MYSQL_URL, toTableName, spark.getProperties());
+        rows.write().mode(SaveMode.Append).jdbc(ConfigHandler.MYSQL_URL,toTableName,spark.getProperties());
     }
 
 	private Dataset<Row> fetchDataForAggregation() {
 		Dataset<Row> rows = fromTableRows.where("sensor_id= '" + sensorId + "' and " +
 				timeField + " >= " + startTS + " and " + timeField + " < " + (startTS + ConfigHandler.GRANULARITY_IN_SECONDS));
-		rows = rows.sort(timeField);
+//		rows = rows.sort(timeField);
 		return rows;
 	}
 

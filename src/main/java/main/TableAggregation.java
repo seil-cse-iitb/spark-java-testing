@@ -3,6 +3,7 @@ package main;
 import org.apache.spark.sql.DataFrameWriter;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.SaveMode;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -60,7 +61,7 @@ public class TableAggregation {
         /*
         This function starts aggregation of archival data after the last aggregated row present corresponding to this sensor
          */
-		LogHandler.logInfo("[" + fromTableName + "]Aggregation started for minute " + UtilsHandler.tsToStr(this.startTS));
+//		LogHandler.logInfo("[" + fromTableName + "]Aggregation started for minute " + UtilsHandler.tsToStr(this.startTS));
 		if (this.startTS > UtilsHandler.tsInSeconds(2018, 2, 26, 0, 0, 0)) {
 			return;
 		}
@@ -74,10 +75,9 @@ public class TableAggregation {
 			storeAggregatedData(rows);
 			storeEndEpoch = System.currentTimeMillis();
 		}
-		LogHandler.logInfo("[FetchingTime(" + (fetchEndEpoch - startEpoch) + ")]" +
+		LogHandler.logInfo("["+fromTableName+"]Aggregation ended for minute "+ UtilsHandler.tsToStr(this.startTS)+"\n[FetchingTime(" + (fetchEndEpoch - startEpoch) + ")]" +
 				"[AggregationTime(" + (aggEndEpoch - startEpoch) + ")]" +
-				"[StoringTime(" + (storeEndEpoch - startEpoch) + ")]");
-		this.goToNextMinute();
+				"[StoringTime(" + (storeEndEpoch - startEpoch) + ")]");		this.goToNextMinute();
 	}
 
 	public void goToNextMinute() {
@@ -107,9 +107,7 @@ public class TableAggregation {
 	}
 
 	private void storeAggregatedData(Dataset<Row> rows) {
-		DataFrameWriter<Row> dataFrameWriter = new DataFrameWriter<Row>(rows);
-		dataFrameWriter=dataFrameWriter.mode("append");
-		dataFrameWriter.jdbc(ConfigHandler.MYSQL_URL, toTableName, spark.getProperties());
+		rows.write().mode(SaveMode.Append).jdbc(ConfigHandler.MYSQL_URL, toTableName, spark.getProperties());
 	}
 
 	public Dataset<Row> fetchDataForAggregation() {
