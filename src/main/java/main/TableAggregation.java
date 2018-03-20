@@ -107,7 +107,7 @@ public class TableAggregation {
 	}
 
 	private void storeAggregatedData(Dataset<Row> rows) {
-		rows.write().mode(SaveMode.Append).jdbc(ConfigHandler.MYSQL_URL, toTableName, spark.getProperties());
+		rows.write().mode(SaveMode.ErrorIfExists).jdbc(ConfigHandler.MYSQL_URL, toTableName, spark.getProperties());
 	}
 
 	public Dataset<Row> fetchDataForAggregation() {

@@ -1,8 +1,8 @@
 package main;
 
-import org.apache.kerby.config.Conf;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
@@ -25,7 +25,9 @@ public class Spark {
                 .getOrCreate();
     }
 
-
+    public JavaSparkContext getJavaSparkContext(){
+        return new JavaSparkContext(sparkSession.sparkContext());
+    }
     public void logsOff(){
         Logger.getLogger("org").setLevel(Level.OFF);
         Logger.getLogger("akka").setLevel(Level.OFF);
