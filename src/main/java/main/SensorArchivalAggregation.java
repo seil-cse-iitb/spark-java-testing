@@ -8,7 +8,7 @@ import org.apache.spark.sql.SaveMode;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
-public class SensorAggregation {
+public class SensorArchivalAggregation {
 
 	String fromTableName;
 	String sensorId;
@@ -19,7 +19,7 @@ public class SensorAggregation {
 	Spark spark;
 	Dataset<Row> fromTableRows ;
 
-	public SensorAggregation(String fromTableName, String sensorId, String toTableName) {
+	public SensorArchivalAggregation(String fromTableName, String sensorId, String toTableName) {
 		this.fromTableName = fromTableName;
 		this.sensorId = sensorId;
 		this.toTableName = toTableName;
@@ -54,13 +54,13 @@ public class SensorAggregation {
 			}
 			this.startTS = this.startTS - this.startTS % ConfigHandler.GRANULARITY_IN_SECONDS;
 		} catch (SQLException e) {
-			LogHandler.logError("[MySQL][Query][SensorAggregation][FetchStartTimestamp]" + e.getMessage());
+			LogHandler.logError("[MySQL][Query][SensorArchivalAggregation][FetchStartTimestamp]" + e.getMessage());
 			UtilsHandler.exit_thread();
 		}
 	}
 
 
-    public void startArchivalAggregation() {
+    public void startAggregation() {
         /*
         This function starts aggregation of archival data after the last aggregated row present corresponding to this sensor
          */

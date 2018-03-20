@@ -1,33 +1,7 @@
 package test;
 
 import main.LogHandler;
-import main.SensorAggregation;
 import main.SensorLiveAggregation;
-import main.Spark;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
-import org.apache.spark.SparkConf;
-import org.apache.spark.api.java.JavaRDD;
-import org.apache.spark.api.java.JavaSparkContext;
-import org.apache.spark.api.java.function.Function;
-import org.apache.spark.api.java.function.VoidFunction2;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
-import org.apache.spark.sql.RowFactory;
-import org.apache.spark.sql.SQLContext;
-import org.apache.spark.sql.types.DataTypes;
-import org.apache.spark.sql.types.StructField;
-import org.apache.spark.sql.types.StructType;
-import org.apache.spark.storage.StorageLevel;
-import org.apache.spark.streaming.Duration;
-import org.apache.spark.streaming.Time;
-import org.apache.spark.streaming.api.java.JavaReceiverInputDStream;
-import org.apache.spark.streaming.api.java.JavaStreamingContext;
-import org.apache.spark.streaming.mqtt.MQTTUtils;
-
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
 
 public class SensorLiveAggregationTest {
 
@@ -87,7 +61,7 @@ public class SensorLiveAggregationTest {
                     try {
                         LogHandler.logInfo("[Thread][Start] started for sensor_id:" + sensorId[finalI]);
                         SensorLiveAggregation sensorLiveAggregation= new SensorLiveAggregation(sensorId[finalI], toTableName);
-                        sensorLiveAggregation.startArchivalAggregation();
+                        sensorLiveAggregation.startAggregation();
                         LogHandler.logInfo("[Thread][End] ended for sensor_id:" + sensorId[finalI]);
                     } catch (Exception e) {
                         LogHandler.logError("From table: sensor_id:[" + sensorId[finalI] + "] To table:[" + toTableName + "]" + e.getMessage());

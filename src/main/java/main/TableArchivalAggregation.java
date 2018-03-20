@@ -8,7 +8,7 @@ import org.apache.spark.sql.SaveMode;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
-public class TableAggregation {
+public class TableArchivalAggregation {
 
 	String fromTableName;
 	String toTableName;
@@ -18,7 +18,7 @@ public class TableAggregation {
 	Spark spark;
 	Dataset<Row> fromTableRows;
 
-	public TableAggregation(String fromTableName, String toTableName) {
+	public TableArchivalAggregation(String fromTableName, String toTableName) {
 		this.fromTableName = fromTableName;
 		this.toTableName = toTableName;
 		this.timeField = "ts";
@@ -51,13 +51,13 @@ public class TableAggregation {
 			}
 			this.startTS = this.startTS - this.startTS % ConfigHandler.GRANULARITY_IN_SECONDS;
 		} catch (SQLException e) {
-			LogHandler.logError("[MySQL][Query][TableAggregation][FetchStartTimestamp]" + e.getMessage());
+			LogHandler.logError("[MySQL][Query][TableArchivalAggregation][FetchStartTimestamp]" + e.getMessage());
 			UtilsHandler.exit_thread();
 		}
 	}
 
 
-	public void startArchivalAggregation() {
+	public void startAggregation() {
         /*
         This function starts aggregation of archival data after the last aggregated row present corresponding to this sensor
          */

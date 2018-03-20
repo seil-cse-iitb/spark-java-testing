@@ -2,7 +2,7 @@ package test;
 
 
 import main.LogHandler;
-import main.TableAggregation;
+import main.TableArchivalAggregation;
 
 public class TableAggregationTest {
 	public static void main(String[] args) {
@@ -13,10 +13,10 @@ public class TableAggregationTest {
 					try {
 
 						LogHandler.logInfo("[Thread][Start] started for table:"+fromTableName );
-						TableAggregation tableAggregation  = new TableAggregation(fromTableName,toTableName);
+						TableArchivalAggregation tableArchivalAggregation = new TableArchivalAggregation(fromTableName,toTableName);
 						int i = 1051200;
 						while (i > 0) {
-							tableAggregation.startArchivalAggregation();
+							tableArchivalAggregation.startAggregation();
 							i--;
 						}
 						LogHandler.logInfo("[Thread][End] ended for table:"+fromTableName);
