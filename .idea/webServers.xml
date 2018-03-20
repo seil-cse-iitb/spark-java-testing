@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="WebServers">
+    <option name="servers">
+      <webServer id="3a79b2cf-910a-4474-beb5-d936fdc7ffc7" name="Spark Data Aggregation" url="http://10.129.149.14">
+        <fileTransfer host="10.129.149.14" port="22" rootFolder="/home/seil" accessType="SFTP">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" />
+          </advancedOptions>
+          <option name="port" value="22" />
+        </fileTransfer>
+      </webServer>
+    </option>
+  </component>
+</project>

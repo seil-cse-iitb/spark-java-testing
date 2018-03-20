@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="PublishConfigData" serverName="Spark Data Aggregation">
+    <serverData>
+      <paths name="Spark Data Aggregation">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/sapan/spark-data-aggregation" local="$PROJECT_DIR$" web="/" />
+          </mappings>
+        </serverdata>
+      </paths>
+    </serverData>
+  </component>
+</project>

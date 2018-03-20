@@ -8,17 +8,30 @@
     <artifactId>seil_spark</artifactId>
     <version>1.0-SNAPSHOT</version>
 
-
     <dependencies>
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
             <version>4.12</version>
         </dependency>
+        <!-- https://mvnrepository.com/artifact/javax.mail/mail -->
+        <dependency>
+            <groupId>javax.mail</groupId>
+            <artifactId>mail</artifactId>
+            <version>1.4.7</version>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/javax.mail/javax.mail-api -->
+        <dependency>
+            <groupId>javax.mail</groupId>
+            <artifactId>javax.mail-api</artifactId>
+            <version>1.6.1</version>
+        </dependency>
+
+        <!-- https://mvnrepository.com/artifact/mysql/mysql-connector-java -->
         <dependency>
             <groupId>mysql</groupId>
             <artifactId>mysql-connector-java</artifactId>
-            <version>6.0.6</version>
+            <version>5.1.6</version>
         </dependency>
         <dependency>
             <groupId>org.apache.bahir</groupId>
@@ -32,8 +45,8 @@
         </dependency>
         <dependency>
             <groupId>org.scala-lang</groupId>
-            <artifactId>scala-library-all</artifactId>
-            <version>LATEST</version>
+            <artifactId>scala-library</artifactId>
+            <version>2.11.8</version>
         </dependency>
         <dependency>
             <groupId>org.eclipse.jetty</groupId>
@@ -58,21 +71,7 @@
             <artifactId>spark-sql_2.11</artifactId>
             <version>LATEST</version>
         </dependency>
-        <!-- https://mvnrepository.com/artifact/org.apache.bahir/spark-sql-streaming-mqtt -->
-        <dependency>
-            <groupId>org.apache.bahir</groupId>
-            <artifactId>spark-sql-streaming-mqtt_2.11</artifactId>
-            <version>LATEST</version>
-        </dependency>
-
-        <!-- https://mvnrepository.com/artifact/org.scala-lang/scala-library -->
-        <dependency>
-            <groupId>org.scala-lang</groupId>
-            <artifactId>scala-library</artifactId>
-            <version>LATEST</version>
-        </dependency>
-
-        <!-- https://mvnrepository.com/artifact/org.apache.hadoop/hadoop-common -->
+       <!-- https://mvnrepository.com/artifact/org.apache.hadoop/hadoop-common -->
         <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-common</artifactId>
@@ -85,12 +84,18 @@
         <!--<scope>system</scope>-->
         <!--<systemPath>${JAVA_HOME}/lib/tools.jar</systemPath>-->
         <!--</dependency>-->
-
     </dependencies>
-
-
     <build>
         <plugins>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>1.2.1</version>
+                <configuration>
+
+                    <mainClass>test.TableAggregationTest</mainClass>
+                </configuration>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
