@@ -1,6 +1,5 @@
 package main;
 
-import org.apache.spark.sql.DataFrameWriter;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SaveMode;
@@ -99,7 +98,7 @@ public class TableArchivalAggregation {
 
 	private String[] getSQLAggregationFormula(String tableName) {
 		if (tableName.equalsIgnoreCase("sch_3")) {
-			return ConfigHandler.SQL_AGGREGATION_FORMULA_SCH;
+			return ConfigHandler.SQL_AGGREGATION_FORMULA_SCH_3;
 		} else {
 			LogHandler.logError("[AggregationFormula] not found for table: " + tableName);
 			return null;

@@ -57,13 +57,15 @@ public class SensorLiveAggregationTest {
             final int finalI = i;
             Thread thread = new Thread(new Runnable() {
                 public void run() {
+                    String tableNameForSchema = "sch_3";
                     String toTableName = "live_agg_sch_3";
                     try {
                         LogHandler.logInfo("[Thread][Start] started for sensor_id:" + sensorId[finalI]);
-                        SensorLiveAggregation sensorLiveAggregation= new SensorLiveAggregation(sensorId[finalI], toTableName);
+                        SensorLiveAggregation sensorLiveAggregation= new SensorLiveAggregation(tableNameForSchema, sensorId[finalI], toTableName);
                         sensorLiveAggregation.startAggregation();
                         LogHandler.logInfo("[Thread][End] ended for sensor_id:" + sensorId[finalI]);
                     } catch (Exception e) {
+                    	e.printStackTrace();
                         LogHandler.logError("From table: sensor_id:[" + sensorId[finalI] + "] To table:[" + toTableName + "]" + e.getMessage());
                     }
                 }

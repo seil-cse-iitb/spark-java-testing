@@ -13,7 +13,6 @@ import java.util.Properties;
 public class Spark {
     SparkSession sparkSession;
     JavaSparkContext javaSparkContext;
-    SQLContext sqlContext;
 
     public Spark() {
         initSession();
@@ -38,11 +37,7 @@ public class Spark {
     }
 
     public SQLContext getSQLContext() {
-        if (sqlContext == null) {
-            return new SQLContext(this.getJavaSparkContext());
-        } else {
-            return sqlContext;
-        }
+            return this.sparkSession.sqlContext();
     }
 
     public void logsOff() {
