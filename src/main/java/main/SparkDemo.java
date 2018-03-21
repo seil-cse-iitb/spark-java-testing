@@ -62,6 +62,7 @@ public class SparkDemo {
             public void call(JavaRDD<String> stringJavaRDD, Time time) throws Exception {
                 System.out.println(time.toString());
                 JavaRDD<Row> rowJavaRDD = stringJavaRDD.map(stringRowFunction);
+                System.out.println(rowJavaRDD.collect());
                 Dataset<Row> rows = sqlContext.applySchema(rowJavaRDD, getDataSchema());
                 rows.show();
 
