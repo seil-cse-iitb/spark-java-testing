@@ -8,9 +8,10 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SQLContext;
 import org.apache.spark.sql.SparkSession;
 
+import java.io.Serializable;
 import java.util.Properties;
 
-public class Spark {
+public class Spark implements scala.Serializable {
     SparkSession sparkSession;
     JavaSparkContext javaSparkContext;
 

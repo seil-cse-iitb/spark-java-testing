@@ -8,16 +8,15 @@ import org.apache.spark.sql.*;
 import org.apache.spark.sql.types.StructType;
 import org.apache.spark.storage.StorageLevel;
 import org.apache.spark.streaming.Duration;
-import org.apache.spark.streaming.StreamingContext;
 import org.apache.spark.streaming.Time;
 import org.apache.spark.streaming.api.java.JavaReceiverInputDStream;
 import org.apache.spark.streaming.api.java.JavaStreamingContext;
 import org.apache.spark.streaming.mqtt.MQTTUtils;
+import scala.Serializable;
 
-import java.io.Serializable;
 import java.util.ArrayList;
 
-public class SensorLiveAggregation {
+public class SensorLiveAggregation implements Serializable {
 
 	String sensorId;
 	String toTableName;
@@ -27,6 +26,17 @@ public class SensorLiveAggregation {
 	Spark spark;
 	Dataset<Row> globalBuffer;
 	String tableNameForSchema;
+	Function<String, Row> stringRowFunction = new Function<String, Row>() {
+		public Row call(String s) {
+			String[] strList = s.split(",");
+			ArrayList<String> doubleList = new ArrayList<String>();
+			doubleList.add(sensorId);
+			for (int i = 0; i < strList.length; i++) {
+				doubleList.add(Double.parseDouble(strList[i]) + "");
+			}
+			return RowFactory.create(doubleList);
+		}
+	};
 
 	public SensorLiveAggregation(String tableNameForSchema, String sensorId, String toTableName) {
 		this.sensorId = sensorId;
@@ -88,22 +98,15 @@ public class SensorLiveAggregation {
 				new Duration(ConfigHandler.LIVE_AGGREGATION_INTERVAL_IN_SECONDS * 1000));
 		jssc.checkpoint("checkpoint");
 		JavaReceiverInputDStream<String> messages = MQTTUtils.createStream(jssc, ConfigHandler.MQTT_URL, getTopic(sensorId), StorageLevel.MEMORY_AND_DISK());
-		messages.foreachRDD(new VoidFunction2<JavaRDD<String>, Time> () {
+		messages.foreachRDD(new VoidFunction2<JavaRDD<String>, Time>() {
 			public void call(JavaRDD<String> stringJavaRDD, Time time) {
-				final Function<String, Row> stringRowFunction = new Function<String, Row>() {
-					public Row call(String s) {
-						String[] strList = s.split(",");
-						ArrayList<String> doubleList = new ArrayList<String>();
-						doubleList.add(sensorId);
-						for (int i = 0; i < strList.length; i++) {
-							doubleList.add(Double.parseDouble(strList[i]) + "");
-						}
-						return RowFactory.create(doubleList);
-					}
-				};
 				JavaRDD<Row> rowJavaRDD = stringJavaRDD.map(stringRowFunction);
 				Dataset<Row> rows = sqlContext.applySchema(rowJavaRDD, getLiveDataSchema(tableNameForSchema));
-				globalBuffer = globalBuffer.union(rows);
+				if (globalBuffer == null) {
+					globalBuffer = rows;
+				} else {
+					globalBuffer = rows.union(globalBuffer);
+				}
 				Row maxMinTs = globalBuffer.select("max(" + timeField + ") as max_ts, min(" + timeField + ") as min_ts").first();
 				long maxTs = maxMinTs.getLong(maxMinTs.fieldIndex("max_ts"));
 				long minTs = maxMinTs.getLong(maxMinTs.fieldIndex("min_ts"));
