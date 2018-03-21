@@ -29,12 +29,11 @@ public class SensorLiveAggregation implements Serializable {
 	Function<String, Row> stringRowFunction = new Function<String, Row>() {
 		public Row call(String s) {
 			String[] strList = s.split(",");
-			ArrayList<String> doubleList = new ArrayList<String>();
-			doubleList.add(sensorId);
+			Double[] doubleList = new Double[strList.length];
 			for (int i = 0; i < strList.length; i++) {
-				doubleList.add(Double.parseDouble(strList[i]) + "");
+				doubleList[i] = Double.parseDouble(strList[i]);
 			}
-			return RowFactory.create(doubleList);
+			return RowFactory.create(sensorId,doubleList);
 		}
 	};
 
@@ -88,7 +87,7 @@ public class SensorLiveAggregation implements Serializable {
 	}
 
 	private void storeAggregatedData(Dataset<Row> rows) {
-		rows.write().mode(SaveMode.ErrorIfExists).jdbc(ConfigHandler.MYSQL_URL, toTableName, spark.getProperties());
+		rows.write().mode(SaveMode.Append).jdbc(ConfigHandler.MYSQL_URL, toTableName, spark.getProperties());
 	}
 
 	public Dataset<Row> startAggregation() {
@@ -102,6 +101,7 @@ public class SensorLiveAggregation implements Serializable {
 			public void call(JavaRDD<String> stringJavaRDD, Time time) {
 				JavaRDD<Row> rowJavaRDD = stringJavaRDD.map(stringRowFunction);
 				Dataset<Row> rows = sqlContext.applySchema(rowJavaRDD, getLiveDataSchema(tableNameForSchema));
+				rows.show();
 				if (globalBuffer == null) {
 					globalBuffer = rows;
 				} else {
