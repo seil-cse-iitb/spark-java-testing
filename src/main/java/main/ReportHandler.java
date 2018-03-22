@@ -32,7 +32,7 @@ public class ReportHandler {
 			message.setFrom(new InternetAddress(report_sender_email));
 			message.addRecipient(Message.RecipientType.TO, new InternetAddress(report_reciever_email));
 			message.setSubject(subject);
-			message.setText("[" + UtilsHandler.current_timestamp() + "]" + text);
+			message.setText("[" + UtilsHandler.current_timestamp_str() + "]" + text);
 			Transport.send(message);
 			LogHandler.logInfo("[Report]Report Sent");
 		} catch (Exception e) {
@@ -40,7 +40,7 @@ public class ReportHandler {
 			LogHandler.logInfo("[ReportEmailError]" + e.getMessage());
 		}
 		LogHandler.logInfo("Subject:"+subject);
-		LogHandler.logInfo("Text:"+text);
+//		LogHandler.logInfo("Text:"+text);
 	}
 
 	public static void reportError(String text) {
