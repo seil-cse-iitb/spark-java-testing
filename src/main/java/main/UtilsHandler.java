@@ -8,7 +8,7 @@ import java.util.TimeZone;
 public class UtilsHandler {
     public final static Calendar calendar = new GregorianCalendar(TimeZone.getTimeZone("Asia/Kolkata"));
 
-    public static String current_timestamp(){
+    public static String current_timestamp_str(){
         return new Date().toString();
     }
     public static String tsToStr(double timestamp){
