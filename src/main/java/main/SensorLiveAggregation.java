@@ -150,6 +150,7 @@ public class SensorLiveAggregation implements Serializable {
                 long storeEndEpoch = 0;
                 long startEpoch = System.currentTimeMillis();
                 storeAggregatedData(globalAggregatedBuffer);
+                globalAggregatedBuffer=null;
                 storeEndEpoch = System.currentTimeMillis();
                 LogHandler.logInfo("[StoringTime("+(storeEndEpoch-startEpoch)+")]");
                 //TODO BlockRDD[0] claimed by blockmanager error comes sometime so solve it
