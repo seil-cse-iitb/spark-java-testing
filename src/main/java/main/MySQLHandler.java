@@ -1,7 +1,7 @@
 package main;
 
-import scala.Serializable;
 
+import java.io.Serializable;
 import java.sql.*;
 
 public class MySQLHandler implements Serializable {
