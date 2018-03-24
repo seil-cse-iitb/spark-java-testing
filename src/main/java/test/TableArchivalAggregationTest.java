@@ -4,7 +4,7 @@ package test;
 import main.LogHandler;
 import main.TableArchivalAggregation;
 
-public class TableAggregationTest {
+public class TableArchivalAggregationTest {
 	public static void main(String[] args) {
 			Thread thread = new Thread(new Runnable() {
 				public void run() {

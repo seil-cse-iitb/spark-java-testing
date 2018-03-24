@@ -172,8 +172,8 @@
     <orderEntry type="library" name="Maven: joda-time:joda-time:2.9.9" level="project" />
     <orderEntry type="library" name="Maven: com.carrotsearch:hppc:0.7.2" level="project" />
     <orderEntry type="library" name="Maven: com.vlkan:flatbuffers:1.2.0-3f79e055" level="project" />
-    <orderEntry type="library" name="Maven: org.apache.hadoop:hadoop-common:3.0.0" level="project" />
-    <orderEntry type="library" name="Maven: org.apache.hadoop:hadoop-annotations:3.0.0" level="project" />
+    <orderEntry type="library" name="Maven: org.apache.hadoop:hadoop-common:3.0.1" level="project" />
+    <orderEntry type="library" name="Maven: org.apache.hadoop:hadoop-annotations:3.0.1" level="project" />
     <orderEntry type="module-library">
       <library name="Maven: jdk.tools:jdk.tools:1.8">
         <CLASSES>
@@ -212,7 +212,7 @@
     <orderEntry type="library" name="Maven: com.google.re2j:re2j:1.1" level="project" />
     <orderEntry type="library" name="Maven: com.google.protobuf:protobuf-java:2.5.0" level="project" />
     <orderEntry type="library" name="Maven: com.google.code.gson:gson:2.2.4" level="project" />
-    <orderEntry type="library" name="Maven: org.apache.hadoop:hadoop-auth:3.0.0" level="project" />
+    <orderEntry type="library" name="Maven: org.apache.hadoop:hadoop-auth:3.0.1" level="project" />
     <orderEntry type="library" name="Maven: com.nimbusds:nimbus-jose-jwt:4.41.1" level="project" />
     <orderEntry type="library" name="Maven: com.github.stephenc.jcip:jcip-annotations:1.0-1" level="project" />
     <orderEntry type="library" name="Maven: net.minidev:json-smart:2.3" level="project" />

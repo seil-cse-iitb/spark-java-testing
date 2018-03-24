@@ -3,7 +3,7 @@ package test;
 import main.LogHandler;
 import main.SensorArchivalAggregation;
 
-public class SensorAggregationTest {
+public class SensorArchivalAggregationTest {
 	public static void main(String[] args) {
 		final String[] sensorId = {
 //				"power_k_a",
