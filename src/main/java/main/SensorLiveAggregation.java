@@ -40,9 +40,6 @@ public class SensorLiveAggregation implements Serializable {
 //		this.startTS = UtilsHandler.tsInSeconds(2017, 10, 3, 0, 0, 0);//base timestamp
     }
 
-    private String getTopic(String sensorId) {
-        return "data/kresit/sch/3"; // TODO return proper topic
-    }
 
     public void goToNextMinute() {
         this.startTS += ConfigHandler.LIVE_GRANULARITY_IN_SECONDS;
@@ -88,12 +85,14 @@ public class SensorLiveAggregation implements Serializable {
         JavaStreamingContext jssc = new JavaStreamingContext(javaSparkContext,
                 new Duration(ConfigHandler.LIVE_AGGREGATION_INTERVAL_IN_SECONDS * 1000));
         jssc.checkpoint("checkpoint");
-        JavaReceiverInputDStream<String> messages = MQTTUtils.createStream(jssc, ConfigHandler.MQTT_URL, getTopic(sensorId), StorageLevel.MEMORY_AND_DISK());
+        String topic  = UtilsHandler.getTopic(sensorId);
+        LogHandler.logInfo("[Topic]"+topic);
+        JavaReceiverInputDStream<String> messages = MQTTUtils.createStream(jssc, ConfigHandler.MQTT_URL, topic, StorageLevel.MEMORY_AND_DISK());
         final Function<String, Row> stringRowFunction = new Function<String, Row>() {
             public Row call(String s) throws Exception {
                 String[] strArray = s.split(",");
                 ArrayList<Object> list = new ArrayList<Object>();
-                double ts_recv = System.currentTimeMillis()/1000;
+                double ts_recv = System.currentTimeMillis() / 1000;
                 list.add(sensorId);
                 list.add(ts_recv);
                 for (int i = 0; i < strArray.length; i++) {
@@ -111,17 +110,20 @@ public class SensorLiveAggregation implements Serializable {
                     return;
                 }
                 Dataset<Row> rows = sqlContext.applySchema(rowJavaRDD, getLiveDataSchema(tableNameForSchema));
-//                rows.show();
                 if (globalBuffer == null) {
                     globalBuffer = rows;
                 } else {
-                    globalBuffer = rows.union(globalBuffer);
+                    globalBuffer = globalBuffer.union(rows);
                 }
-                Row maxMinTs = globalBuffer.agg(functions.max(timeField), functions.min(timeField)).first();
-                long maxTs = (long) maxMinTs.getDouble(maxMinTs.fieldIndex("max(" + timeField + ")"));
-                long minTs = (long) maxMinTs.getDouble(maxMinTs.fieldIndex("min(" + timeField + ")"));
+                Row maxMinTs = globalBuffer.select(functions.max(timeField), functions.min(timeField)).first();
+                double maxTs =  maxMinTs.getDouble(maxMinTs.fieldIndex("max(" + timeField + ")"));
+                double minTs =  maxMinTs.getDouble(maxMinTs.fieldIndex("min(" + timeField + ")"));
                 long aggregableBatchAvailable = ((long) (maxTs / ConfigHandler.LIVE_GRANULARITY_IN_SECONDS)) - ((long) (minTs / ConfigHandler.LIVE_GRANULARITY_IN_SECONDS));
-                if (aggregableBatchAvailable == 0) return;//don't aggregate or ignore if no complete batch is available
+                LogHandler.logInfo("[minTS("+minTs+")][maxTS("+maxTs+")][aggregableBatchAvailable("+aggregableBatchAvailable+")]");
+                if (aggregableBatchAvailable == 0){
+                    globalBuffer.persist();
+                    return;//don't aggregate or ignore if no complete batch is available
+                    }
                 if (minTs % ConfigHandler.LIVE_GRANULARITY_IN_SECONDS != 0) {
                     //Ignore part
                     minTs = (minTs - minTs % ConfigHandler.LIVE_GRANULARITY_IN_SECONDS) + ConfigHandler.LIVE_GRANULARITY_IN_SECONDS;
@@ -130,6 +132,7 @@ public class SensorLiveAggregation implements Serializable {
                 Dataset<Row> except = globalBuffer.where(timeField + ">=" + ((aggregableBatchAvailable * ConfigHandler.LIVE_GRANULARITY_IN_SECONDS) + minTs));
                 Dataset<Row> aggregableBuffer = globalBuffer.except(except);
                 globalBuffer = except;
+                globalBuffer.persist();//TODO Logic is not correct data is not properly aggregating
                 //now aggregate the aggregableBuffer
                 startTS = minTs;
                 for (int i = 0; i < aggregableBatchAvailable; i++) {
@@ -139,7 +142,6 @@ public class SensorLiveAggregation implements Serializable {
                     long aggEndEpoch = 0, storeInBufferEndEpoch = 0;
                     rowsDataset = aggregateDataUsingSQL(rowsDataset);
                     aggEndEpoch = System.currentTimeMillis();
-//                    rowsDataset.show();
                     storeAggregatedDataInBuffer(rowsDataset);
                     storeInBufferEndEpoch = System.currentTimeMillis();
                     LogHandler.logInfo("[" + sensorId + "]Aggregation ended for interval " + UtilsHandler.tsToStr(startTS) + "\n[FetchingTime(" + (fetchEndEpoch - startEpoch) + ")]" +
@@ -150,10 +152,10 @@ public class SensorLiveAggregation implements Serializable {
                 long storeEndEpoch = 0;
                 long startEpoch = System.currentTimeMillis();
                 storeAggregatedData(globalAggregatedBuffer);
-                globalAggregatedBuffer=null;
+                globalAggregatedBuffer = null;
                 storeEndEpoch = System.currentTimeMillis();
-                LogHandler.logInfo("[StoringTime("+(storeEndEpoch-startEpoch)+")]");
-                //TODO BlockRDD[0] claimed by blockmanager error comes sometime so solve it
+                LogHandler.logInfo("[StoringTime(" + (storeEndEpoch - startEpoch) + ")]");
+                // BlockRDD[1] claimed: Error solved by persisting the dataset
             }
         });
         jssc.start();
@@ -167,10 +169,10 @@ public class SensorLiveAggregation implements Serializable {
     }
 
     private void storeAggregatedDataInBuffer(Dataset<Row> rowsDataset) {
-        if(this.globalAggregatedBuffer==null){
+        if (this.globalAggregatedBuffer == null) {
             this.globalAggregatedBuffer = rowsDataset;
-        }else{
-            this.globalAggregatedBuffer.union(rowsDataset);
+        } else {
+            this.globalAggregatedBuffer = this.globalAggregatedBuffer.union(rowsDataset);
         }
     }
 
