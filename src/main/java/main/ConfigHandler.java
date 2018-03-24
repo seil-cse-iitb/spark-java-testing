@@ -66,7 +66,7 @@ public class ConfigHandler {
     final static String MQTT_HOST = "mqtt.seil.cse.iitb.ac.in";
     final static String MQTT_URL = "tcp://" + MQTT_HOST + ":1883";
     public static final long LIVE_AGGREGATION_INTERVAL_IN_SECONDS = 10;//TODO test when LIVE_AGGREGATION_INTERVAL_IN_SECONDS < LIVE_GRANULARITY_IN_SECONDS
-    final static long LIVE_GRANULARITY_IN_SECONDS = 3;
+    final static long LIVE_GRANULARITY_IN_SECONDS =10;
     //TODO define schema for all the database tables
 
 
