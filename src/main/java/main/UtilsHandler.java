@@ -71,7 +71,7 @@ public class UtilsHandler {
             String sensor_id = sensorObj.get("sensor_id").getAsString();
             String data = "data";
             int channel = sensorObj.get("channel").getAsInt();
-            int mac_id = sensorObj.get("mac_id").getAsInt();
+            String mac_id = sensorObj.get("mac_id").getAsString();
             String sensor_type = "";
             switch (channel) {
                 case 1:

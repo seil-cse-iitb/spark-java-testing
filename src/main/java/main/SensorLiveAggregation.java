@@ -132,7 +132,7 @@ public class SensorLiveAggregation implements Serializable {
                 Dataset<Row> except = globalBuffer.where(timeField + ">=" + ((aggregableBatchAvailable * ConfigHandler.LIVE_GRANULARITY_IN_SECONDS) + minTs));
                 Dataset<Row> aggregableBuffer = globalBuffer.except(except);
                 globalBuffer = except;
-                globalBuffer.persist();//TODO Logic is not correct data is not properly aggregating
+                globalBuffer.persist();
                 //now aggregate the aggregableBuffer
                 startTS = minTs;
                 for (int i = 0; i < aggregableBatchAvailable; i++) {
