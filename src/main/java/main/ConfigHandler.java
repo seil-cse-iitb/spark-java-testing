@@ -12,8 +12,8 @@ public class ConfigHandler {
     final static String REPORT_RECEIVER_EMAIL = "sapantanted99@gmail.com";
     final static String SCRIPT_IDENTITY_TEXT = "Spark script for aggregation";
     final static String LOG_FILE_PATH = "./log";
-    //    final static String MYSQL_HOST = "10.129.149.11";
-    final static String MYSQL_HOST = "mysql.seil.cse.iitb.ac.in";
+        final static String MYSQL_HOST = "10.129.149.11";
+//    final static String MYSQL_HOST = "mysql.seil.cse.iitb.ac.in";
     final static String MYSQL_USERNAME = "root";
     final static String MYSQL_PASSWORD = "MySQL@seil";
     final static String MYSQL_DATABASE_NAME = "seil_sensor_data";
@@ -63,10 +63,11 @@ public class ConfigHandler {
     //TODO define aggregation formula for all the database tables
 
     //Live Aggregation Variables;
+//    final static String MQTT_HOST = "10.129.149.9";
     final static String MQTT_HOST = "mqtt.seil.cse.iitb.ac.in";
     final static String MQTT_URL = "tcp://" + MQTT_HOST + ":1883";
-    public static final long LIVE_AGGREGATION_INTERVAL_IN_SECONDS = 60;//TODO test when LIVE_AGGREGATION_INTERVAL_IN_SECONDS < LIVE_GRANULARITY_IN_SECONDS
-    final static long LIVE_GRANULARITY_IN_SECONDS =60;
+    public static final long LIVE_AGGREGATION_INTERVAL_IN_SECONDS = 10;//TODO test when LIVE_AGGREGATION_INTERVAL_IN_SECONDS < LIVE_GRANULARITY_IN_SECONDS
+    final static long LIVE_GRANULARITY_IN_SECONDS =10;
     //TODO define schema for all the database tables
 
 

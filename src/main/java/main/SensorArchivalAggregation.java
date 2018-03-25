@@ -28,7 +28,7 @@ public class SensorArchivalAggregation {
 		this.spark = new Spark();
 		fetchStartTimestamp();
 		fromTableRows = spark.getRowsByTableName(fromTableName);
-//		this.startTS = UtilsHandler.tsInSeconds(2017, 10, 3, 0, 0, 0);//base timestamp
+//		this.startTs = UtilsHandler.tsInSeconds(2017, 10, 3, 0, 0, 0);//base timestamp
 	}
 
 	public void fetchStartTimestamp() {
@@ -63,7 +63,7 @@ public class SensorArchivalAggregation {
         /*
         This function starts aggregation of archival data after the last aggregated row present corresponding to this sensor
          */
-//        LogHandler.logInfo("[" + sensorId + "]Aggregation started for minute " + UtilsHandler.tsToStr(this.startTS));
+//        LogHandler.logInfo("[" + sensorId + "]Aggregation started for minute " + UtilsHandler.tsToStr(this.startTs));
         if (this.startTS > UtilsHandler.tsInSeconds(2018, 2, 26, 0, 0, 0)) {
             return;
         }

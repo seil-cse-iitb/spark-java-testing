@@ -60,7 +60,7 @@ public class TableArchivalAggregation {
         /*
         This function starts aggregation of archival data after the last aggregated row present corresponding to this sensor
          */
-//		LogHandler.logInfo("[" + fromTableName + "]Aggregation started for minute " + UtilsHandler.tsToStr(this.startTS));
+//		LogHandler.logInfo("[" + fromTableName + "]Aggregation started for minute " + UtilsHandler.tsToStr(this.startTs));
 		if (this.startTS > UtilsHandler.tsInSeconds(2018, 2, 26, 0, 0, 0)) {
 			return;
 		}

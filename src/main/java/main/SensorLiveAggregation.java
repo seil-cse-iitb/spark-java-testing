@@ -12,8 +12,8 @@ import org.apache.spark.streaming.Time;
 import org.apache.spark.streaming.api.java.JavaReceiverInputDStream;
 import org.apache.spark.streaming.api.java.JavaStreamingContext;
 import org.apache.spark.streaming.mqtt.MQTTUtils;
-import scala.concurrent.Future;
 
+import javax.rmi.CORBA.Util;
 import java.io.Serializable;
 import java.util.ArrayList;
 
@@ -21,7 +21,8 @@ public class SensorLiveAggregation implements Serializable {
 
     String sensorId;
     String toTableName;
-    double startTS;
+    double startTs;
+    double endTs;
     MySQLHandler mySQLHandler;
     String timeField;
     Spark spark;
@@ -34,15 +35,15 @@ public class SensorLiveAggregation implements Serializable {
         this.toTableName = toTableName;
         this.timeField = "ts";
         this.tableNameForSchema = tableNameForSchema;
-        this.startTS = -1;
+        this.startTs = -1;
         mySQLHandler = new MySQLHandler(ConfigHandler.MYSQL_HOST, ConfigHandler.MYSQL_USERNAME, ConfigHandler.MYSQL_PASSWORD, ConfigHandler.MYSQL_DATABASE_NAME);
         this.spark = new Spark();
-//		this.startTS = UtilsHandler.tsInSeconds(2017, 10, 3, 0, 0, 0);//base timestamp
+//		this.startTs = UtilsHandler.tsInSeconds(2017, 10, 3, 0, 0, 0);//base timestamp
     }
 
 
-    public void goToNextMinute() {
-        this.startTS += ConfigHandler.LIVE_GRANULARITY_IN_SECONDS;
+    public void goToNextInterval() {
+        this.startTs += ConfigHandler.LIVE_GRANULARITY_IN_SECONDS;
     }
 
     private Dataset<Row> aggregateDataUsingSQL(Dataset<Row> rows) {
@@ -52,9 +53,8 @@ public class SensorLiveAggregation implements Serializable {
         for (int i = 0; i < aggregationFormula.length; i++) {
             sql = sql + " " + aggregationFormula[i] + ", ";
         }
-        sql = sql + startTS + " as " + timeField + "  from sensor_data_" + this.sensorId;
-        rows = spark.sparkSession.sql(sql);
-        return rows;
+        sql = sql + startTs + " as " + timeField + "  from sensor_data_" + this.sensorId;
+        return spark.sparkSession.sql(sql);
     }
 
     private String[] getSQLAggregationFormula(String tableName) {
@@ -85,11 +85,11 @@ public class SensorLiveAggregation implements Serializable {
         JavaStreamingContext jssc = new JavaStreamingContext(javaSparkContext,
                 new Duration(ConfigHandler.LIVE_AGGREGATION_INTERVAL_IN_SECONDS * 1000));
         jssc.checkpoint("checkpoint");
-        String topic  = UtilsHandler.getTopic(sensorId);
-        LogHandler.logInfo("[Topic]"+topic);
+        String topic = UtilsHandler.getTopic(sensorId);
+        LogHandler.logInfo("[Topic(" + topic + ")]");
         JavaReceiverInputDStream<String> messages = MQTTUtils.createStream(jssc, ConfigHandler.MQTT_URL, topic, StorageLevel.MEMORY_AND_DISK());
         final Function<String, Row> stringRowFunction = new Function<String, Row>() {
-            public Row call(String s) throws Exception {
+            public Row call(String s) {
                 String[] strArray = s.split(",");
                 ArrayList<Object> list = new ArrayList<Object>();
                 double ts_recv = System.currentTimeMillis() / 1000;
@@ -110,49 +110,52 @@ public class SensorLiveAggregation implements Serializable {
                     return;
                 }
                 Dataset<Row> rows = sqlContext.applySchema(rowJavaRDD, getLiveDataSchema(tableNameForSchema));
+                Dataset<Row> select = rows.select(functions.min(timeField), functions.max(timeField));
+                Row maxMinTs = select.first();
+                double minTs = maxMinTs.getDouble(maxMinTs.fieldIndex("min(" + timeField + ")"));
+                double maxTs = maxMinTs.getDouble(maxMinTs.fieldIndex("max(" + timeField + ")"));
                 if (globalBuffer == null) {
-                    globalBuffer = rows;
+                    if (minTs % ConfigHandler.LIVE_GRANULARITY_IN_SECONDS != 0) {
+                        minTs = (minTs - (minTs % ConfigHandler.LIVE_GRANULARITY_IN_SECONDS)) + ConfigHandler.LIVE_GRANULARITY_IN_SECONDS;
+                    }
+                    globalBuffer = rows.where(timeField + ">=" + minTs);//Ignore part
+                    startTs = minTs;
                 } else {
                     globalBuffer = globalBuffer.union(rows);
                 }
-                Row maxMinTs = globalBuffer.select(functions.max(timeField), functions.min(timeField)).first();
-                double maxTs =  maxMinTs.getDouble(maxMinTs.fieldIndex("max(" + timeField + ")"));
-                double minTs =  maxMinTs.getDouble(maxMinTs.fieldIndex("min(" + timeField + ")"));
-                long aggregableBatchAvailable = ((long) (maxTs / ConfigHandler.LIVE_GRANULARITY_IN_SECONDS)) - ((long) (minTs / ConfigHandler.LIVE_GRANULARITY_IN_SECONDS));
-                LogHandler.logInfo("[minTS("+minTs+")][maxTS("+maxTs+")][aggregableBatchAvailable("+aggregableBatchAvailable+")]");
-                if (aggregableBatchAvailable == 0){
-                    globalBuffer.persist();
-                    return;//don't aggregate or ignore if no complete batch is available
-                    }
-                if (minTs % ConfigHandler.LIVE_GRANULARITY_IN_SECONDS != 0) {
-                    //Ignore part
-                    minTs = (minTs - minTs % ConfigHandler.LIVE_GRANULARITY_IN_SECONDS) + ConfigHandler.LIVE_GRANULARITY_IN_SECONDS;
-                    globalBuffer = globalBuffer.where(timeField + ">=" + minTs);
-                }
-                Dataset<Row> except = globalBuffer.where(timeField + ">=" + ((aggregableBatchAvailable * ConfigHandler.LIVE_GRANULARITY_IN_SECONDS) + minTs));
-                Dataset<Row> aggregableBuffer = globalBuffer.except(except);
-                globalBuffer = except;
+                endTs = maxTs - maxTs % ConfigHandler.LIVE_GRANULARITY_IN_SECONDS;
+                long aggregableBatchAvailable = ((long) ((endTs - startTs) / ConfigHandler.LIVE_GRANULARITY_IN_SECONDS));
+                Dataset<Row> aggregableBuffer = globalBuffer.where(timeField + "<" + endTs);
+                globalBuffer = globalBuffer.where(timeField + ">=" + endTs);
                 globalBuffer.persist();
-                //now aggregate the aggregableBuffer
-                startTS = minTs;
-                for (int i = 0; i < aggregableBatchAvailable; i++) {
+                LogHandler.logInfo("[" + sensorId + "][startTs(" + UtilsHandler.tsToStr(startTs) + ")]" + "[endTs(" + UtilsHandler.tsToStr(endTs) + ")]"
+                        + "[aggregableBatchAvailable(" + aggregableBatchAvailable + ")]");
+                if (aggregableBatchAvailable <= 0) {
+                    return;
+                }
+                //now aggregate the aggregableBuffer and store into aggregatedBuffer
+                Dataset<Row> aggregatedBuffer = null;
+                for (int i = 0; startTs != endTs; goToNextInterval()) {
                     long startEpoch = System.currentTimeMillis();
                     Dataset<Row> rowsDataset = fetchDataForAggregation(aggregableBuffer);
                     long fetchEndEpoch = System.currentTimeMillis();
                     long aggEndEpoch = 0, storeInBufferEndEpoch = 0;
-                    rowsDataset = aggregateDataUsingSQL(rowsDataset);
+                    Dataset<Row> aggregatedDataset = aggregateDataUsingSQL(rowsDataset);
                     aggEndEpoch = System.currentTimeMillis();
-                    storeAggregatedDataInBuffer(rowsDataset);
+                    if (aggregatedBuffer == null) {
+                        aggregatedBuffer = aggregatedDataset;
+                    } else {
+                        aggregatedBuffer = aggregatedBuffer.union(aggregatedDataset);
+                    }
                     storeInBufferEndEpoch = System.currentTimeMillis();
-                    LogHandler.logInfo("[" + sensorId + "]Aggregation ended for interval " + UtilsHandler.tsToStr(startTS) + "\n[FetchingTime(" + (fetchEndEpoch - startEpoch) + ")]" +
-                            "[AggregationTime(" + (aggEndEpoch - startEpoch) + ")]" + "[StoringInBufferTime(" + (storeInBufferEndEpoch - startEpoch) + ")]\n" +
-                            "Aggregable batch remaining[" + (aggregableBatchAvailable - i - 1) + "]");
-                    goToNextMinute();
+                    LogHandler.logInfo("[" + sensorId + "][AggregationDoneFor(" + UtilsHandler.tsToStr(startTs) + ")]"
+                            + "[FetchingTime(" + (fetchEndEpoch - startEpoch) + ")]" + "[AggregationTime(" + (aggEndEpoch - startEpoch) + ")]"
+                            + "[StoringInBufferTime(" + (storeInBufferEndEpoch - startEpoch) + ")]");
                 }
                 long storeEndEpoch = 0;
                 long startEpoch = System.currentTimeMillis();
-                storeAggregatedData(globalAggregatedBuffer);
-                globalAggregatedBuffer = null;
+                aggregatedBuffer.show();
+                storeAggregatedData(aggregatedBuffer);
                 storeEndEpoch = System.currentTimeMillis();
                 LogHandler.logInfo("[StoringTime(" + (storeEndEpoch - startEpoch) + ")]");
                 // BlockRDD[1] claimed: Error solved by persisting the dataset
@@ -168,21 +171,21 @@ public class SensorLiveAggregation implements Serializable {
         return null;
     }
 
-    private void storeAggregatedDataInBuffer(Dataset<Row> rowsDataset) {
-        if (this.globalAggregatedBuffer == null) {
-            this.globalAggregatedBuffer = rowsDataset;
+    private Dataset<Row> storeAggregatedDataInBuffer(Dataset<Row> rowsDataset, Dataset<Row> aggregatedBuffer) {
+        if (aggregatedBuffer == null) {
+            return rowsDataset;
         } else {
-            this.globalAggregatedBuffer = this.globalAggregatedBuffer.union(rowsDataset);
+            return aggregatedBuffer.union(rowsDataset);
         }
     }
 
     public Dataset<Row> fetchDataForAggregation(Dataset<Row> aggregableBuffer) {
-        Dataset<Row> rows = aggregableBuffer.where(timeField + " >= " + startTS + " and " + timeField + " < " + (startTS + ConfigHandler.LIVE_GRANULARITY_IN_SECONDS));
+        Dataset<Row> rows = aggregableBuffer.where(timeField + " >= " + startTs + " and " + timeField + " < " + (startTs + ConfigHandler.LIVE_GRANULARITY_IN_SECONDS));
         return rows;
     }
 
 
-    public double getStartTS() {
-        return startTS;
+    public double getStartTs() {
+        return startTs;
     }
 }
