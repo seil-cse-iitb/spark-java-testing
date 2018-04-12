@@ -25,6 +25,7 @@ public class Spark implements scala.Serializable {
                 .config("spark.sql.warehouse.dir", "~/Desktop/spark-warehouse")
                 .config("spark.executor.memory", "2g")
                 .config("spark.driver.allowMultipleContexts", "true")
+                .config("spark.driver.allowMultipleStreamingContexts", "true")
                 .master("local[4]")
                 .getOrCreate();
     }
