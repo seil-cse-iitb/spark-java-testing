@@ -1,25 +1,27 @@
 package main;
 
-import org.apache.spark.SparkConf;
-import org.apache.spark.api.java.JavaRDD;
-import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.api.java.function.FlatMapFunction;
-import org.apache.spark.api.java.function.Function;
-import org.apache.spark.api.java.function.VoidFunction2;
+import org.apache.spark.api.java.function.MapFunction;
+import org.apache.spark.serializer.JavaSerializer;
+import org.apache.spark.serializer.Serializer;
 import org.apache.spark.sql.*;
+import org.apache.spark.sql.catalyst.ScalaReflection;
+import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder;
+import org.apache.spark.sql.streaming.OutputMode;
 import org.apache.spark.sql.streaming.StreamingQuery;
 import org.apache.spark.sql.streaming.StreamingQueryException;
+import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructType;
-import org.apache.spark.storage.StorageLevel;
-import org.apache.spark.streaming.Duration;
-import org.apache.spark.streaming.Time;
-import org.apache.spark.streaming.api.java.JavaReceiverInputDStream;
-import org.apache.spark.streaming.api.java.JavaStreamingContext;
-import org.apache.spark.streaming.mqtt.MQTTUtils;
-import sun.security.ssl.Debug;
+import org.apache.spark.streaming.Durations;
+import scala.reflect.ClassManifestFactory;
+import scala.reflect.ClassTag;
+import scala.runtime.AbstractFunction1;
+import sun.security.krb5.Config;
+import org.apache.spark.sql.functions;
 
-import javax.rmi.CORBA.Util;
 import java.io.Serializable;
+import java.sql.Date;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -29,12 +31,8 @@ public class SensorLiveAggregation implements Serializable {
     String sensorId;
     String toTableName;
     double startTs;
-    double endTs;
-    MySQLHandler mySQLHandler;
     String timeField;
     Spark spark;
-    Dataset<Row> globalBuffer;
-    //    Dataset<Row> globalAggregatedBuffer;
     String tableNameForSchema;
 
     public SensorLiveAggregation(String tableNameForSchema, String sensorId, String toTableName) {
@@ -43,53 +41,13 @@ public class SensorLiveAggregation implements Serializable {
         this.timeField = "ts";
         this.tableNameForSchema = tableNameForSchema;
         this.startTs = -1;
-        mySQLHandler = new MySQLHandler(ConfigHandler.MYSQL_HOST, ConfigHandler.MYSQL_USERNAME, ConfigHandler.MYSQL_PASSWORD, ConfigHandler.MYSQL_DATABASE_NAME);
         this.spark = new Spark();
 //		this.startTs = UtilsHandler.tsInSeconds(2017, 10, 3, 0, 0, 0);//base timestamp
     }
 
-
-    public void goToNextInterval() {
-        this.startTs += ConfigHandler.LIVE_GRANULARITY_IN_SECONDS;
-    }
-
-    private Dataset<Row> aggregateDataUsingSQL(Dataset<Row> rows) {
-        String[] aggregationFormula = getSQLAggregationFormula(tableNameForSchema);
-        rows.createOrReplaceTempView("sensor_data_" + this.sensorId);
-        String sql = "select ";
-        for (int i = 0; i < aggregationFormula.length; i++) {
-            sql = sql + " " + aggregationFormula[i] + ", ";
-        }
-        sql = sql + startTs + " as " + timeField + "  from sensor_data_" + this.sensorId;
-        return spark.sparkSession.sql(sql);
-    }
-
-    private String[] getSQLAggregationFormula(String tableName) {
-        if (tableName.equalsIgnoreCase("sch_3")) {
-            return ConfigHandler.SQL_AGGREGATION_FORMULA_SCH_3;
-        } else {
-            LogHandler.logError("[AggregationFormula] not found for table: " + tableName);
-            return null;
-        }
-    }
-
-    private StructType getLiveDataSchema(String tableName) {
-        if (tableName.equalsIgnoreCase("sch_3")) {
-            return ConfigHandler.SCH_3_SCHEMA;
-        } else {
-            LogHandler.logError("[LiveDataSchema] not found for table: " + tableName);
-            return null;
-        }
-    }
-
-    private void storeAggregatedData(Dataset<Row> rows) {
-        rows.write().mode(SaveMode.Append).jdbc(ConfigHandler.MYSQL_URL, toTableName, spark.getProperties());
-    }
-
-    public Dataset<Row> startAggregation() {
+    public Dataset<Row> startAggregationKafka() {
         String topic = UtilsHandler.getTopic(sensorId);
         LogHandler.logInfo("[Topic(" + topic + ")]");
-
 
         // Subscribe to 1 topic
         Dataset<Row> stream = spark.sparkSession
@@ -101,36 +59,77 @@ public class SensorLiveAggregation implements Serializable {
                 .load();
         Dataset<Row> key_value = stream.select(functions.col("key").cast("string"),
                 functions.col("value").cast("string"));
-        Dataset<Row> topic_key_value = key_value.select("key","value").where(functions.col("key").equalTo(topic));
+        Dataset<Row> topic_key_value = key_value.select("key", "value").where(functions.col("key").equalTo(topic));
         Dataset<Row> value = topic_key_value.select("value");
-//TODO        value.flatMap(new , Encoders.DOUBLE());
+//        Dataset<Row> rowDataset = value.withColumn("temp", functions.split(functions.col("value"), ","));
+        printOnConsole(topic_key_value);
 
-        StreamingQuery console = value.writeStream()
+
+        //TODO        value.flatMap(new , Encoders.DOUBLE());
+        return null;
+    }
+
+    public void startAggregation() {
+        String topic = UtilsHandler.getTopic(sensorId);
+        LogHandler.logInfo("[Topic(" + topic + ")]");
+        Dataset<Row> stream = spark.sparkSession
+                .readStream()
+                .format("org.apache.bahir.sql.streaming.mqtt.MQTTStreamSourceProvider")
+                .option("topic", topic)
+                .load(ConfigHandler.MQTT_URL);
+        stream.printSchema();
+        Dataset<Row> sch3 = spark.sparkSession.createDataFrame(new ArrayList<Row>(), ConfigHandler.SCH_3_SCHEMA);
+        ExpressionEncoder<Row> rowExpressionEncoder = sch3.exprEnc();
+        Dataset<Row> dataset = stream.map(new MapFunction<Row, Row>() {
+            public Row call(Row row) throws Exception {
+                Timestamp timestamp = row.getTimestamp(row.fieldIndex("timestamp"));
+                String value1 = row.getString(row.fieldIndex("value"));
+                String[] split = value1.split(",");
+                ArrayList<Object> rowValues = new ArrayList<Object>();
+                rowValues.add(sensorId);
+                rowValues.add((double) timestamp.getTime() / 1000);
+                for (String s : split) {
+                    rowValues.add(Double.parseDouble(s));
+                }
+                return RowFactory.create(rowValues.toArray());
+            }
+        }, rowExpressionEncoder);
+        dataset.printSchema();
+        Dataset<Row> aggregatedData = aggregate(dataset);
+
+        printOnConsole(aggregatedData.select("window", "sensor_id", "W"));
+    }
+
+    private Dataset<Row> aggregate(Dataset<Row> dataset) {
+        String aggStr = "";
+        Column[] aggArray = new Column[ConfigHandler.SQL_AGGREGATION_FORMULA_SCH_3.length - 1];
+        for (int i = 0; i < ConfigHandler.SQL_AGGREGATION_FORMULA_SCH_3.length - 1; i++)
+            aggArray[i] = functions.expr(ConfigHandler.SQL_AGGREGATION_FORMULA_SCH_3[i + 1]);
+        Column expr = functions.expr(ConfigHandler.SQL_AGGREGATION_FORMULA_SCH_3[0]);
+        Column timestamp = functions.col(timeField).cast(DataTypes.TimestampType).as("eventTime");
+        String[] columnStrs = dataset.columns();
+        Column[] columns = new Column[columnStrs.length + 1];
+        for (int i=0;i<columnStrs.length;i++) {
+            columns[i]=functions.col(columnStrs[i]);
+        }
+        columns[columns.length-1]=timestamp;
+        Dataset<Row> select = dataset.select(columns);
+        return select.withWatermark("eventTime", "10 minutes").groupBy(functions.window(timestamp, "1 minute"))
+                .agg(expr, aggArray);
+    }
+
+    private void printOnConsole(Dataset<Row> dataset) {
+        StreamingQuery console = dataset.writeStream()
+                .outputMode(OutputMode.Update())
                 .format("console")
+                .option("truncate", false)
                 .start();
         try {
             console.awaitTermination();
         } catch (StreamingQueryException e) {
             e.printStackTrace();
         }
-        return null;
+
     }
 
-    private Dataset<Row> storeAggregatedDataInBuffer(Dataset<Row> rowsDataset, Dataset<Row> aggregatedBuffer) {
-        if (aggregatedBuffer == null) {
-            return rowsDataset;
-        } else {
-            return aggregatedBuffer.union(rowsDataset);
-        }
-    }
-
-    public Dataset<Row> fetchDataForAggregation(Dataset<Row> aggregableBuffer) {
-        Dataset<Row> rows = aggregableBuffer.where(timeField + " >= " + startTs + " and " + timeField + " < " + (startTs + ConfigHandler.LIVE_GRANULARITY_IN_SECONDS));
-        return rows;
-    }
-
-
-    public double getStartTs() {
-        return startTs;
-    }
 }
