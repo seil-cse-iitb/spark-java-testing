@@ -1,6 +1,6 @@
 package test;
 
-import main.LogHandler;
+import handlers.LogHandler;
 import main.SensorArchivalAggregation;
 
 public class SensorArchivalAggregationTest {

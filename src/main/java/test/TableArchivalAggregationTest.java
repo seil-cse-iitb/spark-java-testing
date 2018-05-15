@@ -1,7 +1,7 @@
 package test;
 
 
-import main.LogHandler;
+import handlers.LogHandler;
 import main.TableArchivalAggregation;
 
 public class TableArchivalAggregationTest {

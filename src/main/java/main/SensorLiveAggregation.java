@@ -1,30 +1,20 @@
 package main;
 
-import org.apache.spark.api.java.function.FlatMapFunction;
+import handlers.ConfigHandler;
+import handlers.LogHandler;
+import handlers.UtilsHandler;
 import org.apache.spark.api.java.function.MapFunction;
-import org.apache.spark.serializer.JavaSerializer;
-import org.apache.spark.serializer.Serializer;
 import org.apache.spark.sql.*;
-import org.apache.spark.sql.catalyst.ScalaReflection;
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder;
 import org.apache.spark.sql.streaming.OutputMode;
 import org.apache.spark.sql.streaming.StreamingQuery;
 import org.apache.spark.sql.streaming.StreamingQueryException;
 import org.apache.spark.sql.types.DataTypes;
-import org.apache.spark.sql.types.StructType;
-import org.apache.spark.streaming.Durations;
-import scala.reflect.ClassManifestFactory;
-import scala.reflect.ClassTag;
-import scala.runtime.AbstractFunction1;
-import sun.security.krb5.Config;
 import org.apache.spark.sql.functions;
 
 import java.io.Serializable;
-import java.sql.Date;
 import java.sql.Timestamp;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Iterator;
 
 public class SensorLiveAggregation implements Serializable {
 
@@ -120,7 +110,7 @@ public class SensorLiveAggregation implements Serializable {
 
     private void printOnConsole(Dataset<Row> dataset) {
         StreamingQuery console = dataset.writeStream()
-                .outputMode(OutputMode.Append())
+                .outputMode(OutputMode.Complete())
                 .format("console")
                 .option("truncate", false)
                 .start();

@@ -1,5 +1,6 @@
 package main;
 
+import handlers.ConfigHandler;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.spark.api.java.JavaSparkContext;
@@ -8,7 +9,6 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SQLContext;
 import org.apache.spark.sql.SparkSession;
 
-import java.io.Serializable;
 import java.util.Properties;
 
 public class Spark implements scala.Serializable {
@@ -25,7 +25,9 @@ public class Spark implements scala.Serializable {
                 .config("spark.sql.warehouse.dir", "~/spark-warehouse")
                 .config("spark.executor.memory", "2g")
                 .config("spark.driver.allowMultipleContexts", "true")
-                .master("local[4]")
+//                .master("spark://10.129.149.14:7077") //can't print on console..Don't know why
+                .master("local[*]")
+
                 .getOrCreate();
     }
 

@@ -1,6 +1,6 @@
 package test;
 
-import main.LogHandler;
+import handlers.LogHandler;
 import main.SensorLiveAggregation;
 
 public class SensorLiveAggregationTest {
