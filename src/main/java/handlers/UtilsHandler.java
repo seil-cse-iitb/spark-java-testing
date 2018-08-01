@@ -48,7 +48,8 @@ public class UtilsHandler {
                 responseStr += inputLine;
             in.close();
         } catch (IOException e) {
-            LogHandler.logError("[GET REQUEST(" + urlStr + ")]" + e.getMessage());
+            e.printStackTrace();
+//            LogHandler.logError("[GET REQUEST(" + urlStr + ")]" + e.getMessage());
         }
         return responseStr;
     }

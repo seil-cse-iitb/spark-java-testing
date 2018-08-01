@@ -1,4 +1,4 @@
-package main;
+package handlers;
 
 import handlers.ConfigHandler;
 import org.apache.log4j.Level;
@@ -11,11 +11,11 @@ import org.apache.spark.sql.SparkSession;
 
 import java.util.Properties;
 
-public class Spark implements scala.Serializable {
-    SparkSession sparkSession;
+public class SparkHandler implements scala.Serializable {
+    public SparkSession sparkSession;
     JavaSparkContext javaSparkContext;
 
-    public Spark() {
+    public SparkHandler() {
         initSession();
         logsOff();
     }
@@ -25,8 +25,8 @@ public class Spark implements scala.Serializable {
                 .config("spark.sql.warehouse.dir", "~/spark-warehouse")
                 .config("spark.executor.memory", "2g")
                 .config("spark.driver.allowMultipleContexts", "true")
-//                .master("spark://10.129.149.14:7077") //can't print on console..Don't know why
-                .master("local[*]")
+                .master("spark://10.129.149.14:7077") //can't print streaming query on console..Don't know why
+//                .master("local[*]")
 
                 .getOrCreate();
     }
@@ -49,16 +49,16 @@ public class Spark implements scala.Serializable {
     }
 
 
-    public Properties getProperties() {
+    public Properties getProperties(String user, String password) {
         Properties properties = new Properties();
-        properties.setProperty("user", ConfigHandler.MYSQL_USERNAME);
-        properties.setProperty("password", ConfigHandler.MYSQL_PASSWORD);
+        properties.setProperty("user", user);
+        properties.setProperty("password", password);
         return properties;
     }
 
     public Dataset<Row> getRowsByTableName(String tableName) {
-        Properties properties = getProperties();
-        Dataset<Row> rows = this.sparkSession.read().jdbc(ConfigHandler.MYSQL_URL, tableName, properties);
+        Properties properties = getProperties(ConfigHandler.SOURCE_MYSQL_USERNAME, ConfigHandler.SOURCE_MYSQL_PASSWORD);
+        Dataset<Row> rows = this.sparkSession.read().jdbc(ConfigHandler.SOURCE_MYSQL_URL, tableName, properties);
         return rows;
     }
 

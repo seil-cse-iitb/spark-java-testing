@@ -2,6 +2,7 @@ package main;
 
 import handlers.ConfigHandler;
 import handlers.LogHandler;
+import handlers.SparkHandler;
 import handlers.UtilsHandler;
 import org.apache.spark.api.java.function.MapFunction;
 import org.apache.spark.sql.*;
@@ -22,7 +23,7 @@ public class SensorLiveAggregation implements Serializable {
     String toTableName;
     double startTs;
     String timeField;
-    Spark spark;
+    SparkHandler sparkHandler;
     String tableNameForSchema;
 
     public SensorLiveAggregation(String tableNameForSchema, String sensorId, String toTableName) {
@@ -31,7 +32,7 @@ public class SensorLiveAggregation implements Serializable {
         this.timeField = "ts";
         this.tableNameForSchema = tableNameForSchema;
         this.startTs = -1;
-        this.spark = new Spark();
+        this.sparkHandler = new SparkHandler();
 //		this.startTs = UtilsHandler.tsInSeconds(2017, 10, 3, 0, 0, 0);//base timestamp
     }
 
@@ -40,7 +41,7 @@ public class SensorLiveAggregation implements Serializable {
         LogHandler.logInfo("[Topic(" + topic + ")]");
 
         // Subscribe to 1 topic
-        Dataset<Row> stream = spark.sparkSession
+        Dataset<Row> stream = sparkHandler.sparkSession
                 .readStream()
                 .format("kafka")
                 .option("kafka.bootstrap.servers", "10.129.149.18:9092,10.129.149.19:9092,10.129.149.20:9092")
@@ -62,13 +63,13 @@ public class SensorLiveAggregation implements Serializable {
     public void startAggregation() {
         String topic = UtilsHandler.getTopic(sensorId);
         LogHandler.logInfo("[Topic(" + topic + ")]");
-        Dataset<Row> stream = spark.sparkSession
+        Dataset<Row> stream = sparkHandler.sparkSession
                 .readStream()
                 .format("org.apache.bahir.sql.streaming.mqtt.MQTTStreamSourceProvider")
                 .option("topic", topic)
                 .load(ConfigHandler.MQTT_URL);
         stream.printSchema();
-        Dataset<Row> sch3 = spark.sparkSession.createDataFrame(new ArrayList<Row>(), ConfigHandler.SCH_3_SCHEMA);
+        Dataset<Row> sch3 = sparkHandler.sparkSession.createDataFrame(new ArrayList<Row>(), ConfigHandler.SCH_3_SCHEMA);
         ExpressionEncoder<Row> rowExpressionEncoder = sch3.exprEnc();
         Dataset<Row> dataset = stream.map(new MapFunction<Row, Row>() {
             public Row call(Row row) throws Exception {
