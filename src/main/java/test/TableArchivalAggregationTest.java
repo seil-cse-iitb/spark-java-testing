@@ -13,7 +13,7 @@ public class TableArchivalAggregationTest {
 				public void run() {
 					String fromTableName = "sch_3";
 					String toTableName = "agg_sch_3";
-					double endTs = UtilsHandler.tsInSeconds(2018, 8, 1, 0, 0, 0);
+					double endTs = UtilsHandler.tsInSeconds(2018, 8, 9, 0, 0, 0);
 					try {
 
 						LogHandler.logInfo("[Thread][Start] started for table:"+fromTableName );
