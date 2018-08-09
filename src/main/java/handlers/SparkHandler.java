@@ -25,8 +25,8 @@ public class SparkHandler implements scala.Serializable {
                 .config("spark.sql.warehouse.dir", "~/spark-warehouse")
                 .config("spark.executor.memory", "2g")
                 .config("spark.driver.allowMultipleContexts", "true")
-                .master("spark://10.129.149.14:7077") //can't print streaming query on console..Don't know why
-//                .master("local[*]")
+//                .master("spark://10.129.149.14:7077") //can't print streaming query on console..Don't know why
+                .master("local[*]")
 
                 .getOrCreate();
     }
